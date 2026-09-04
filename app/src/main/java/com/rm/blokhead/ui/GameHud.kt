@@ -11,9 +11,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -58,10 +64,16 @@ private fun HudStat(label: String, value: String) {
     }
 }
 
-/** Full-screen scrim shown once [GameEngine.isGameOver], standing in for the original's
- *  endGame()/high-score-table flow — high scores themselves land in a later pass. */
+/** Full-screen scrim shown once [GameEngine.isGameOver] and the score has been resolved (either
+ *  it didn't qualify for the high-score table, or [NameEntryOverlay] already saved it). Standing
+ *  in for the original's endGame() menu re-entry. */
 @Composable
-fun GameOverOverlay(finalScore: Int, onPlayAgain: () -> Unit, modifier: Modifier = Modifier) {
+fun GameOverOverlay(
+    finalScore: Int,
+    onPlayAgain: () -> Unit,
+    onMainMenu: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -82,6 +94,52 @@ fun GameOverOverlay(finalScore: Int, onPlayAgain: () -> Unit, modifier: Modifier
             )
             Button(onClick = onPlayAgain) {
                 Text("Play Again")
+            }
+            OutlinedButton(
+                onClick = onMainMenu,
+                modifier = Modifier.padding(top = 12.dp),
+            ) {
+                Text("Main Menu")
+            }
+        }
+    }
+}
+
+/** Shown instead of [GameOverOverlay] when the just-finished score qualifies for the high-score
+ *  table, standing in for the original's beginHighScore()/highScoreDisplay() name-entry flow
+ *  (highscoreui.c). */
+@Composable
+fun NameEntryOverlay(finalScore: Int, onSubmit: (name: String) -> Unit, modifier: Modifier = Modifier) {
+    var name by remember { mutableStateOf("") }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "NEW HIGH SCORE!",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Text(
+                text = "Score: $finalScore",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
+            )
+            OutlinedTextField(
+                value = name,
+                onValueChange = { if (it.length <= 24) name = it },
+                label = { Text("Your name") },
+                singleLine = true,
+            )
+            Button(
+                onClick = { onSubmit(name.trim().ifBlank { "Player" }) },
+                modifier = Modifier.padding(top = 16.dp),
+            ) {
+                Text("Save")
             }
         }
     }
