@@ -1,7 +1,7 @@
 # BlokHead
 
-BlokHead is an Android port of [Blokout](https://jlehtinen.net/blokout/) ("3D Tetris"), the
-OpenGL puzzle game by Johannes Lehtinen and Petri Salmi. Pieces fall through a 3D well and you
+BlokHead is an Android port of [Blokout](https://jlehtinen.net/blokout/), a 3D falling-block
+puzzle game by Johannes Lehtinen and Petri Salmi. Pieces fall through a 3D well and you
 translate/rotate them on all three axes to complete and clear horizontal layers.
 
 This is a direct port of the original C/OpenGL source

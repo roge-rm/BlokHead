@@ -30,7 +30,7 @@ fun MenuScreen(onStartGame: () -> Unit, onShowHighScores: () -> Unit, modifier: 
             color = MaterialTheme.colorScheme.onBackground,
         )
         Text(
-            text = "3D Tetris",
+            text = "A Falling Block Game",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp, bottom = 48.dp),
