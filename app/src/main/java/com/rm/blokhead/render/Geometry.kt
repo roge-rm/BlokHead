@@ -24,6 +24,19 @@ private val UNIT_CUBE_FACES = listOf(
     Face(floatArrayOf(1f, 0f, 0f), arrayOf(floatArrayOf(1f, 0f, 0f), floatArrayOf(1f, 1f, 0f), floatArrayOf(1f, 1f, 1f), floatArrayOf(1f, 0f, 1f))),
 )
 
+// The 12 edges of the unit cube, as (corner, corner) pairs.
+private val UNIT_CUBE_EDGES: List<Pair<FloatArray, FloatArray>> = run {
+    val c = { x: Int, y: Int, z: Int -> floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat()) }
+    val corners = (0..1).flatMap { x -> (0..1).flatMap { y -> (0..1).map { z -> Triple(x, y, z) } } }
+    corners.flatMap { (x, y, z) ->
+        buildList {
+            if (x == 0) add(c(0, y, z) to c(1, y, z))
+            if (y == 0) add(c(x, 0, z) to c(x, 1, z))
+            if (z == 0) add(c(x, y, 0) to c(x, y, 1))
+        }
+    }
+}
+
 /** CPU-side mesh building. Every cube is baked with simple per-face directional shading (a stand-
  *  in for the original's GL_LIGHT0 + flat shading) directly into vertex colors, since the GLES2
  *  shader here has no per-fragment lighting. Builds are cheap (a handful of cubes at a time), so
@@ -48,6 +61,20 @@ object Geometry {
     }
 
     private fun dot(a: FloatArray, b: FloatArray) = a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+    /** Appends the 12 edges of one axis-aligned unit cube at grid-space [origin], as GL_LINES
+     *  vertex data tinted a flat [color] (no shading — an outline, not a shaded solid). Used for
+     *  the falling piece so the grid/stack beneath it stays fully visible through it. */
+    fun appendCubeWireframe(out: MutableList<Float>, origin: FloatArray, color: FloatArray) {
+        fun vertex(x: Float, y: Float, z: Float) {
+            out.add(origin[0] + x); out.add(origin[1] + y); out.add(origin[2] + z)
+            out.add(color[0]); out.add(color[1]); out.add(color[2]); out.add(color[3])
+        }
+        for ((a, b) in UNIT_CUBE_EDGES) {
+            vertex(a[0], a[1], a[2])
+            vertex(b[0], b[1], b[2])
+        }
+    }
 
     /** Builds the well's wireframe grid: floor grid lines plus vertical corner edges, matching
      *  the original's tube display list, as GL_LINES vertex data (no color baked in — callers

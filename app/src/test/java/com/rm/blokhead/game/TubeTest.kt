@@ -40,4 +40,29 @@ class TubeTest {
         assertEquals(0, tube.height)
         assertEquals(1, tube.lastDrop)
     }
+
+    @Test
+    fun `a piece spanning two layers keeps its shape on both layers when locked`() {
+        // The "triangle-corner piece": z=0 has an L of 3 cubes at (0,0) (1,0) (0,1), plus one
+        // cube stacked on top at (0,0,1). Regression test for the piece appearing to flatten
+        // into a single layer on locking instead of preserving its full 3D shape.
+        val triangleCorner = FormCatalog.allForms[8]
+        check(triangleCorner.dimensions.toList() == listOf(2, 2, 2))
+        check(triangleCorner.numCubes == 4)
+
+        val tube = Tube(x = 3, y = 3, height = 6)
+        val block = Block(triangleCorner)
+        dropToBottom(tube, block)
+        tube.addBlock(block)
+
+        assertEquals(2, tube.height)
+        assertEquals(true, tube.isFilled(0, 0, 0))
+        assertEquals(true, tube.isFilled(1, 0, 0))
+        assertEquals(true, tube.isFilled(0, 1, 0))
+        assertEquals(false, tube.isFilled(1, 1, 0))
+        assertEquals(true, tube.isFilled(0, 0, 1))
+        assertEquals(false, tube.isFilled(1, 0, 1))
+        assertEquals(false, tube.isFilled(0, 1, 1))
+        assertEquals(false, tube.isFilled(1, 1, 1))
+    }
 }

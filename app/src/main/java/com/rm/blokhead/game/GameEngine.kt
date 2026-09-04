@@ -21,9 +21,9 @@ object Axis {
 class GameEngine(
     private val forms: List<Form> = FormCatalog.allForms,
     private val startLevel: Int = 2,
-    private val width: Int = 3,
-    private val depth: Int = 3,
-    private val height: Int = 18,
+    private val width: Int = 5,
+    private val depth: Int = 5,
+    private val height: Int = 12,
     private val random: Random = Random.Default,
 ) {
     var tube: Tube = Tube(width, depth, height)
