@@ -1,0 +1,81 @@
+package com.rm.blokhead.render
+
+import kotlin.math.max
+
+private const val FLOATS_PER_VERTEX = 7 // x, y, z, r, g, b, a
+
+/** Fixed light direction matching the original's GL_LIGHT0 position (-1, 1, 1). */
+private val LIGHT_DIR = normalize(floatArrayOf(-1f, 1f, 1f))
+
+private fun normalize(v: FloatArray): FloatArray {
+    val len = kotlin.math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+    return floatArrayOf(v[0] / len, v[1] / len, v[2] / len)
+}
+
+private data class Face(val normal: FloatArray, val corners: Array<FloatArray>)
+
+// A unit cube from (0,0,0) to (1,1,1), as 6 faces of 4 corners each (CCW when viewed from outside).
+private val UNIT_CUBE_FACES = listOf(
+    Face(floatArrayOf(0f, 0f, -1f), arrayOf(floatArrayOf(0f, 0f, 0f), floatArrayOf(0f, 1f, 0f), floatArrayOf(1f, 1f, 0f), floatArrayOf(1f, 0f, 0f))),
+    Face(floatArrayOf(0f, 0f, 1f), arrayOf(floatArrayOf(0f, 0f, 1f), floatArrayOf(1f, 0f, 1f), floatArrayOf(1f, 1f, 1f), floatArrayOf(0f, 1f, 1f))),
+    Face(floatArrayOf(0f, -1f, 0f), arrayOf(floatArrayOf(0f, 0f, 0f), floatArrayOf(1f, 0f, 0f), floatArrayOf(1f, 0f, 1f), floatArrayOf(0f, 0f, 1f))),
+    Face(floatArrayOf(0f, 1f, 0f), arrayOf(floatArrayOf(0f, 1f, 0f), floatArrayOf(0f, 1f, 1f), floatArrayOf(1f, 1f, 1f), floatArrayOf(1f, 1f, 0f))),
+    Face(floatArrayOf(-1f, 0f, 0f), arrayOf(floatArrayOf(0f, 0f, 0f), floatArrayOf(0f, 0f, 1f), floatArrayOf(0f, 1f, 1f), floatArrayOf(0f, 1f, 0f))),
+    Face(floatArrayOf(1f, 0f, 0f), arrayOf(floatArrayOf(1f, 0f, 0f), floatArrayOf(1f, 1f, 0f), floatArrayOf(1f, 1f, 1f), floatArrayOf(1f, 0f, 1f))),
+)
+
+/** CPU-side mesh building. Every cube is baked with simple per-face directional shading (a stand-
+ *  in for the original's GL_LIGHT0 + flat shading) directly into vertex colors, since the GLES2
+ *  shader here has no per-fragment lighting. Builds are cheap (a handful of cubes at a time), so
+ *  meshes are simply rebuilt each frame rather than cached/updated incrementally. */
+object Geometry {
+
+    /** Appends one axis-aligned unit cube at grid-space [origin] (its (0,0,0) corner), tinted by
+     *  [color] (rgba, 0..1) and shaded per-face by [LIGHT_DIR], into [out]. */
+    fun appendCube(out: MutableList<Float>, origin: FloatArray, color: FloatArray) {
+        for (face in UNIT_CUBE_FACES) {
+            val shade = max(0.35f, 0.4f + 0.6f * dot(face.normal, LIGHT_DIR))
+            val r = color[0] * shade
+            val g = color[1] * shade
+            val b = color[2] * shade
+            // Fan the quad into two triangles: (0,1,2) and (0,2,3).
+            for (i in intArrayOf(0, 1, 2, 0, 2, 3)) {
+                val c = face.corners[i]
+                out.add(origin[0] + c[0]); out.add(origin[1] + c[1]); out.add(origin[2] + c[2])
+                out.add(r); out.add(g); out.add(b); out.add(color[3])
+            }
+        }
+    }
+
+    private fun dot(a: FloatArray, b: FloatArray) = a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+
+    /** Builds the well's wireframe grid: floor grid lines plus vertical corner edges, matching
+     *  the original's tube display list, as GL_LINES vertex data (no color baked in — callers
+     *  set a uniform color by drawing this list with a fixed vertex color instead). */
+    fun buildWellGridLines(width: Int, depth: Int, height: Int, color: FloatArray): FloatList {
+        val out = ArrayList<Float>()
+        fun line(x0: Float, y0: Float, z0: Float, x1: Float, y1: Float, z1: Float) {
+            out.add(x0); out.add(y0); out.add(z0); out.add(color[0]); out.add(color[1]); out.add(color[2]); out.add(color[3])
+            out.add(x1); out.add(y1); out.add(z1); out.add(color[0]); out.add(color[1]); out.add(color[2]); out.add(color[3])
+        }
+        // Floor grid.
+        for (x in 0..width) line(x.toFloat(), 0f, 0f, x.toFloat(), depth.toFloat(), 0f)
+        for (y in 0..depth) line(0f, y.toFloat(), 0f, width.toFloat(), y.toFloat(), 0f)
+        // Vertical corner edges up to the well's height.
+        for (x in intArrayOf(0, width)) for (y in intArrayOf(0, depth)) {
+            line(x.toFloat(), y.toFloat(), 0f, x.toFloat(), y.toFloat(), height.toFloat())
+        }
+        // Top outline.
+        line(0f, 0f, height.toFloat(), width.toFloat(), 0f, height.toFloat())
+        line(width.toFloat(), 0f, height.toFloat(), width.toFloat(), depth.toFloat(), height.toFloat())
+        line(width.toFloat(), depth.toFloat(), height.toFloat(), 0f, depth.toFloat(), height.toFloat())
+        line(0f, depth.toFloat(), height.toFloat(), 0f, 0f, height.toFloat())
+        return out
+    }
+}
+
+typealias FloatList = List<Float>
+
+fun FloatList.toFloatArray(): FloatArray = FloatArray(size) { this[it] }
+
+const val FLOATS_PER_CUBE_VERTEX = FLOATS_PER_VERTEX
