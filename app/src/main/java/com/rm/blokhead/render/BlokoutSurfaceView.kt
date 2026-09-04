@@ -8,7 +8,7 @@ import kotlin.math.PI
 
 /** Hosts [BlokoutRenderer] and translates single-finger drags into camera orbit, standing in for
  *  the original's mouse-drag view control (ctrlMouse/ctrlMotion in control.c). Piece movement
- *  input lands in a later pass. */
+ *  input arrives via [enqueue], called from the Compose control overlay in MainActivity. */
 class BlokoutSurfaceView(context: Context, engine: GameEngine) : GLSurfaceView(context) {
 
     private val renderer = BlokoutRenderer(engine)
@@ -20,6 +20,9 @@ class BlokoutSurfaceView(context: Context, engine: GameEngine) : GLSurfaceView(c
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
     }
+
+    /** Queues a [GameEngine] action to run on the GL thread on the next frame. */
+    fun enqueue(action: GameEngine.() -> Unit) = renderer.enqueue(action)
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action) {

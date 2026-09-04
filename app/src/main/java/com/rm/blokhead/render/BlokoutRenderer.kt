@@ -7,6 +7,7 @@ import com.rm.blokhead.game.GameEngine
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.util.concurrent.ConcurrentLinkedQueue
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.cos
@@ -43,6 +44,15 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
     private val wellLineColor = floatArrayOf(0.85f, 0.85f, 0.1f, 1f)
     private val blockColor = floatArrayOf(0.15f, 0.55f, 0.95f, 0.9f)
 
+    // Compose controls run on the UI thread but GameEngine isn't synchronized, so input is
+    // queued here and drained on the GL thread at the start of onDrawFrame, right before
+    // engine.update() — the same thread that owns all other engine mutation.
+    private val pendingActions = ConcurrentLinkedQueue<GameEngine.() -> Unit>()
+
+    fun enqueue(action: GameEngine.() -> Unit) {
+        pendingActions.add(action)
+    }
+
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         GLES20.glClearColor(0.03f, 0.04f, 0.045f, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
@@ -59,6 +69,11 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
     }
 
     override fun onDrawFrame(gl: GL10?) {
+        while (true) {
+            val action = pendingActions.poll() ?: break
+            engine.action()
+        }
+
         val now = System.nanoTime()
         val delta = if (lastFrameTimeNanos == 0L) 0f else (now - lastFrameTimeNanos) / 1_000_000_000f
         lastFrameTimeNanos = now
