@@ -10,8 +10,6 @@ import java.nio.FloatBuffer
 import java.util.concurrent.ConcurrentLinkedQueue
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * GLES2 replacement for the original's fixed-function OpenGL 1.x rendering (transforms.c,
@@ -19,6 +17,10 @@ import kotlin.math.sin
  * stack API those relied on doesn't exist on GLES2+, so this redraws the same well + falling
  * piece with a small shader-based pipeline instead. Textured walls are dropped for now (solid
  * colors only); see the project plan's polish phase.
+ *
+ * The camera looks straight down the well's long axis from above (like blockout.net's
+ * BlockOut II reference), rather than the original's freely-orbited oblique view — fixed, no
+ * touch-drag.
  *
  * Drives the game loop itself: [onDrawFrame] measures the real time elapsed since the previous
  * frame and advances [engine] by that delta before rendering, since GLSurfaceView's continuous
@@ -37,12 +39,10 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
     private var viewportHeight = 1
     private var lastFrameTimeNanos = 0L
 
-    // Orbit camera, dragged by the user (touch handling lives in BlokoutSurfaceView).
-    @Volatile var orbitYaw = 0.5f
-    @Volatile var orbitPitch = 0.6f
-
     private val wellLineColor = floatArrayOf(0.85f, 0.85f, 0.1f, 1f)
-    private val blockColor = floatArrayOf(0.15f, 0.55f, 0.95f, 0.9f)
+    // The falling piece is drawn as a wireframe only (no filled faces) so the grid and any locked
+    // cubes beneath it stay fully visible through it, matching BlockOut II's reference look.
+    private val blockWireColor = floatArrayOf(1f, 1f, 1f, 1f)
 
     // Compose controls run on the UI thread but GameEngine isn't synchronized, so input is
     // queued here and drained on the GL thread at the start of onDrawFrame, right before
@@ -94,17 +94,20 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
         val depth = tube.dimensions[1].toFloat()
         val height = tube.dimensions[2].toFloat()
         val aspect = viewportWidth.toFloat() / viewportHeight.toFloat()
+        // A piece spawns right at the well's top opening, so the eye needs real standoff above it
+        // — otherwise a freshly spawned piece sits well under one world unit from the camera and
+        // fills the whole frame. This margin scales with the footprint so it stays proportional
+        // for a wider/narrower well.
+        val standoff = maxOf(width, depth) * 3f
+        val eyeZ = height + standoff
 
-        Matrix.perspectiveM(projectionMatrix, 0, 45f, aspect, 0.5f, width + depth + height + 10f)
+        Matrix.perspectiveM(projectionMatrix, 0, 55f, aspect, 0.5f, eyeZ + 5f)
 
-        val radius = height * 1.1f
         val cx = width / 2f
         val cy = depth / 2f
-        val cz = height / 2f
-        val eyeX = cx + radius * cos(orbitPitch.toDouble()).toFloat() * sin(orbitYaw.toDouble()).toFloat()
-        val eyeY = cy + radius * cos(orbitPitch.toDouble()).toFloat() * cos(orbitYaw.toDouble()).toFloat()
-        val eyeZ = cz + radius * sin(orbitPitch.toDouble()).toFloat()
-        Matrix.setLookAtM(viewMatrix, 0, eyeX, eyeY, eyeZ, cx, cy, cz, 0f, 0f, 1f)
+        // Eye looks straight down the well's long axis from above — the walls recede to a
+        // vanishing point at the floor, same as the reference's fixed view.
+        Matrix.setLookAtM(viewMatrix, 0, cx, cy, eyeZ, cx, cy, 0f, 0f, 1f, 0f)
     }
 
     private fun drawLines(vertexData: FloatArray, mvp: FloatArray) {
@@ -168,7 +171,7 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
                     y - form.centerPoint[1] - 0.5f,
                     z - form.centerPoint[2] - 0.5f,
                 )
-                Geometry.appendCube(vertices, local, blockColor)
+                Geometry.appendCubeWireframe(vertices, local, blockWireColor)
             }
         }
 
@@ -196,7 +199,7 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
         Matrix.multiplyMM(tempMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, tempMatrix, 0)
-        drawTriangles(vertices.toFloatArray(), mvpMatrix)
+        drawLines(vertices.toFloatArray(), mvpMatrix)
     }
 
     private fun colorForLayer(z: Int): FloatArray {
