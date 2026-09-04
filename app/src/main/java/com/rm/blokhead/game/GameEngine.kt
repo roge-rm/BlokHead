@@ -20,13 +20,14 @@ object Axis {
  */
 class GameEngine(
     private val forms: List<Form> = FormCatalog.allForms,
-    startLevel: Int = 2,
-    width: Int = 3,
-    depth: Int = 3,
-    height: Int = 18,
+    private val startLevel: Int = 2,
+    private val width: Int = 3,
+    private val depth: Int = 3,
+    private val height: Int = 18,
     private val random: Random = Random.Default,
 ) {
-    val tube: Tube = Tube(width, depth, height)
+    var tube: Tube = Tube(width, depth, height)
+        private set
 
     var level: Int = startLevel
         private set
@@ -89,6 +90,18 @@ class GameEngine(
         currentBlock.lastStop = elapsedSinceSpawn
         currentBlock.stopHeight = currentBlock.position[2]
         currentBlock.fallSpeed = tube.dimensions[2] / 2f
+    }
+
+    /** Resets the game to a fresh well and starting score/level, for a "play again" flow. */
+    fun restart() {
+        tube = Tube(width, depth, height)
+        level = startLevel
+        score = 0
+        cubesDropped = 0
+        levelsDescended = 0
+        levelFactor = levelFactorFor(startLevel)
+        isGameOver = false
+        spawnBlock()
     }
 
     private fun lockCurrentBlockAndAdvance() {
