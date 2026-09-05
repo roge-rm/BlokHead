@@ -69,6 +69,7 @@ import com.rm.blokhead.ui.GameHud
 import com.rm.blokhead.ui.HudStat
 import com.rm.blokhead.ui.GameOverOverlay
 import com.rm.blokhead.ui.GamepadBindingsScreen
+import com.rm.blokhead.ui.gestureControls
 import com.rm.blokhead.ui.HighScoreScreen
 import com.rm.blokhead.ui.HudSnapshot
 import com.rm.blokhead.ui.MenuScreen
@@ -384,6 +385,7 @@ private fun GameScreen(
         surfaceView.enqueue { rotate(axis, sign) }
     }
     val onHardDropAction: () -> Unit = { surfaceView.enqueue { hardDrop() } }
+    val onTogglePause: () -> Unit = { if (!hud.isGameOver) surfaceView.enqueue { setPaused(!isPaused) } }
 
     val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -409,7 +411,9 @@ private fun GameScreen(
             // dead space top or bottom — landscape has width to spare for this, unlike portrait.
             val edgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.landscapeButtonInset
             val clusterSize = LANDSCAPE_CLUSTER_SIZE * settings.buttonScale
-            val clusterClearance = (clusterSize + edgeInset + 8.dp) * 2
+            // No clusters to clear in gesture mode — the grid can claim the full square instead
+            // of leaving the side margins dead.
+            val clusterClearance = if (settings.gestureControlsEnabled) 0.dp else (clusterSize + edgeInset + 8.dp) * 2
             val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
             // 0f = top, 1f = bottom, 0.5f = centered (landscape's original fixed behavior, and
@@ -428,9 +432,16 @@ private fun GameScreen(
                     .align(Alignment.Center)
                     .width(gridWidth)
                     .fillMaxHeight()
-                    .pointerInput(engine) {
-                        detectTapGestures {
-                            if (!hud.isGameOver) surfaceView.enqueue { setPaused(!isPaused) }
+                    .let { base ->
+                        if (settings.gestureControlsEnabled) {
+                            base.gestureControls(
+                                onMove = onMove,
+                                onRotate = onRotateAction,
+                                onHardDrop = onHardDropAction,
+                                onTogglePause = onTogglePause,
+                            )
+                        } else {
+                            base.pointerInput(engine) { detectTapGestures { onTogglePause() } }
                         }
                     },
                 factory = { surfaceView },
@@ -456,29 +467,47 @@ private fun GameScreen(
                 HudStat("LEVEL", hud.level.toString())
                 HudStat("CUBES", hud.cubesDropped.toString(), modifier = Modifier.padding(top = 8.dp))
             }
-            if (settings.leftHandedMode) {
-                RotateCluster(onRotate = onRotateAction, modifier = leftModifier, scale = settings.buttonScale)
-                MoveDPad(
-                    diagonalEnabled = settings.diagonalButtonsEnabled,
-                    onMove = onMove,
-                    onDiagonalMove = onDiagonalMove,
-                    onHardDrop = onHardDropAction,
-                    modifier = rightModifier,
-                    scale = settings.buttonScale,
-                )
-            } else {
-                MoveDPad(
-                    diagonalEnabled = settings.diagonalButtonsEnabled,
-                    onMove = onMove,
-                    onDiagonalMove = onDiagonalMove,
-                    onHardDrop = onHardDropAction,
-                    modifier = leftModifier,
-                    scale = settings.buttonScale,
-                )
-                RotateCluster(onRotate = onRotateAction, modifier = rightModifier, scale = settings.buttonScale)
+            if (!settings.gestureControlsEnabled) {
+                if (settings.leftHandedMode) {
+                    RotateCluster(onRotate = onRotateAction, modifier = leftModifier, scale = settings.buttonScale)
+                    MoveDPad(
+                        diagonalEnabled = settings.diagonalButtonsEnabled,
+                        onMove = onMove,
+                        onDiagonalMove = onDiagonalMove,
+                        onHardDrop = onHardDropAction,
+                        modifier = rightModifier,
+                        scale = settings.buttonScale,
+                    )
+                } else {
+                    MoveDPad(
+                        diagonalEnabled = settings.diagonalButtonsEnabled,
+                        onMove = onMove,
+                        onDiagonalMove = onDiagonalMove,
+                        onHardDrop = onHardDropAction,
+                        modifier = leftModifier,
+                        scale = settings.buttonScale,
+                    )
+                    RotateCluster(onRotate = onRotateAction, modifier = rightModifier, scale = settings.buttonScale)
+                }
             }
         } else {
-            AndroidView(modifier = Modifier.fillMaxSize(), factory = { surfaceView })
+            AndroidView(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .let { base ->
+                        if (settings.gestureControlsEnabled) {
+                            base.gestureControls(
+                                onMove = onMove,
+                                onRotate = onRotateAction,
+                                onHardDrop = onHardDropAction,
+                                onTogglePause = onTogglePause,
+                            )
+                        } else {
+                            base
+                        }
+                    },
+                factory = { surfaceView },
+            )
 
             GameHud(snapshot = hud, modifier = Modifier.fillMaxWidth())
 
@@ -494,41 +523,44 @@ private fun GameScreen(
             // Tapping anywhere above the grid (the HUD's band included) pauses/unpauses — placed
             // before the controls/overlays below so it never steals taps meant for them, and it's
             // a no-op once the game has ended (pausing a finished game doesn't mean anything).
-            if (!hud.isGameOver) {
+            // Only needed in button mode: in gesture mode the grid's own AndroidView above already
+            // covers the full screen (including this margin, visually) with the richer modifier.
+            if (!hud.isGameOver && !settings.gestureControlsEnabled) {
                 Spacer(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(gridTopHeight)
                         .pointerInput(engine) {
-                            detectTapGestures {
-                                surfaceView.enqueue { setPaused(!isPaused) }
-                            }
+                            detectTapGestures { onTogglePause() }
                         },
                 )
             }
 
-            // Default position is right after the grid's bottom edge (plus a small gap), which
-            // keeps controls just clear of it regardless of screen size; the "Button Height"
-            // setting slides that down towards the bottom edge instead of a fixed guessed position.
-            val minSpacerHeight = containerHeight * gridBottomFraction + 12.dp
-            val maxSpacerHeight = (containerHeight - 200.dp).coerceAtLeast(minSpacerHeight)
-            val spacerHeight = lerp(minSpacerHeight, maxSpacerHeight, settings.portraitButtonHeight)
-            val portraitEdgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.portraitButtonInset
-            Column(modifier = Modifier.fillMaxSize()) {
-                Spacer(Modifier.height(spacerHeight))
-                GameControls(
-                    onMove = onMove,
-                    onDiagonalMove = onDiagonalMove,
-                    onRotate = onRotateAction,
-                    onHardDrop = onHardDropAction,
-                    diagonalEnabled = settings.diagonalButtonsEnabled,
-                    leftHanded = settings.leftHandedMode,
-                    opacity = settings.buttonOpacity,
-                    scale = settings.buttonScale,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = portraitEdgeInset),
-                )
+            if (!settings.gestureControlsEnabled) {
+                // Default position is right after the grid's bottom edge (plus a small gap),
+                // which keeps controls just clear of it regardless of screen size; the "Button
+                // Height" setting slides that down towards the bottom edge instead of a fixed
+                // guessed position.
+                val minSpacerHeight = containerHeight * gridBottomFraction + 12.dp
+                val maxSpacerHeight = (containerHeight - 200.dp).coerceAtLeast(minSpacerHeight)
+                val spacerHeight = lerp(minSpacerHeight, maxSpacerHeight, settings.portraitButtonHeight)
+                val portraitEdgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.portraitButtonInset
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Spacer(Modifier.height(spacerHeight))
+                    GameControls(
+                        onMove = onMove,
+                        onDiagonalMove = onDiagonalMove,
+                        onRotate = onRotateAction,
+                        onHardDrop = onHardDropAction,
+                        diagonalEnabled = settings.diagonalButtonsEnabled,
+                        leftHanded = settings.leftHandedMode,
+                        opacity = settings.buttonOpacity,
+                        scale = settings.buttonScale,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = portraitEdgeInset),
+                    )
+                }
             }
         }
 
