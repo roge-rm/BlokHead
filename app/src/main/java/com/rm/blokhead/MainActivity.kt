@@ -89,7 +89,9 @@ private val LANDSCAPE_CLUSTER_WIDTH = 156.dp
 /** Matches [GameControls]'s private `CELL` — a single button's width at 100% Button Scale. In
  *  landscape, the control clusters sit right against the screen's physical left/right edges,
  *  which on a real device can land right under a camera cutout or the gesture-nav area; insetting
- *  by a full button width (on top of the existing small gap) keeps them clear of either. */
+ *  by a full button width (on top of the existing small gap) keeps them clear of either by
+ *  default — scaled further by [Settings.landscapeButtonInset] for devices that need more or
+ *  less. */
 private val LANDSCAPE_EDGE_INSET = 48.dp
 
 class MainActivity : ComponentActivity() {
@@ -368,7 +370,7 @@ private fun GameScreen(
             // to the box's extra height. A square box (width == height == the full available
             // height) is what actually makes the rendered well as large as possible with zero
             // dead space top or bottom — landscape has width to spare for this, unlike portrait.
-            val edgeInset = 8.dp + LANDSCAPE_EDGE_INSET * settings.buttonScale
+            val edgeInset = 8.dp + LANDSCAPE_EDGE_INSET * settings.buttonScale * settings.landscapeButtonInset
             val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH * settings.buttonScale + edgeInset + 8.dp) * 2
             val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
