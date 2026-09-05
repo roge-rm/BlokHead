@@ -99,25 +99,32 @@ fun SettingsScreen(
             checked = settings.leftHandedMode,
             onCheckedChange = { onSettingsChange(settings.copy(leftHandedMode = it)) },
         )
-        SectionLabel("Button Position (Portrait Only)")
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Below Grid", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("Bottom Edge", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Slider(
-            value = settings.buttonVerticalPosition,
-            onValueChange = { onSettingsChange(settings.copy(buttonVerticalPosition = it)) },
+        // Portrait/landscape each get their own Height and Edge Inset knobs (see Settings.kt's
+        // doc comments for what 0f/1f mean for each), but full-width sliders for all four would
+        // make this screen feel busy — paired side by side instead, half-width each.
+        DualPercentSliderRow(
+            title = "Button Height",
+            leftLabel = "Portrait",
+            leftValue = settings.portraitButtonHeight,
+            leftRange = 0f..1f,
+            onLeftChange = { onSettingsChange(settings.copy(portraitButtonHeight = it)) },
+            rightLabel = "Landscape",
+            rightValue = settings.landscapeButtonHeight,
+            rightRange = 0f..1f,
+            onRightChange = { onSettingsChange(settings.copy(landscapeButtonHeight = it)) },
         )
-        PercentSliderRow(
-            title = "Button Edge Inset (Landscape Only)",
-            // How far the clusters (and SCORE/LEVEL/CUBES above them) sit from the screen's
-            // physical left/right edges, in multiples of one button's width on top of a small
-            // fixed gap — see MainActivity.kt's edgeInset. Wide enough range to clear a camera
-            // cutout or gesture-nav area of practically any real size without needing a cap tied
-            // to Button Scale the way the position slider above is.
-            value = settings.landscapeButtonInset,
-            range = 0f..2f,
-            onValueChange = { onSettingsChange(settings.copy(landscapeButtonInset = it)) },
+        DualPercentSliderRow(
+            title = "Button Edge Inset",
+            // Wide enough range to clear a camera cutout or gesture-nav area of practically any
+            // real size without needing a cap tied to Button Scale the way Height's is.
+            leftLabel = "Portrait",
+            leftValue = settings.portraitButtonInset,
+            leftRange = 0f..2f,
+            onLeftChange = { onSettingsChange(settings.copy(portraitButtonInset = it)) },
+            rightLabel = "Landscape",
+            rightValue = settings.landscapeButtonInset,
+            rightRange = 0f..2f,
+            onRightChange = { onSettingsChange(settings.copy(landscapeButtonInset = it)) },
         )
         PercentSliderRow(
             title = "Button Scale",
@@ -215,6 +222,46 @@ private fun IntSliderRow(
 private fun PercentSliderRow(title: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
     SectionLabel("$title: ${(value * 100).roundToInt()}%")
     Slider(value = value, onValueChange = onValueChange, valueRange = range)
+}
+
+/** Two independent percent sliders side by side under one shared [title] — half the width each,
+ *  for a pair of settings (e.g. Portrait/Landscape) that would otherwise cost a full-width
+ *  [PercentSliderRow] apiece. */
+@Composable
+private fun DualPercentSliderRow(
+    title: String,
+    leftLabel: String,
+    leftValue: Float,
+    leftRange: ClosedFloatingPointRange<Float>,
+    onLeftChange: (Float) -> Unit,
+    rightLabel: String,
+    rightValue: Float,
+    rightRange: ClosedFloatingPointRange<Float>,
+    onRightChange: (Float) -> Unit,
+) {
+    SectionLabel(title)
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        HalfPercentSlider(leftLabel, leftValue, leftRange, onLeftChange, Modifier.weight(1f))
+        HalfPercentSlider(rightLabel, rightValue, rightRange, onRightChange, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun HalfPercentSlider(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            "$label: ${(value * 100).roundToInt()}%",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Slider(value = value, onValueChange = onValueChange, valueRange = range)
+    }
 }
 
 @Composable

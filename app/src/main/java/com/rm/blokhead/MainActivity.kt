@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -81,19 +82,20 @@ import com.rm.blokhead.ui.theme.BlokHeadTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** Each control cluster's fixed footprint in [GameControls]'s [MoveDPad]/[RotateCluster] (3
- *  columns of 48.dp cells with 6.dp gaps) — used only to keep the landscape layout's centered
- *  grid from ever overlapping the clusters beside it; not imported directly since those are
- *  private constants of a different file's internal layout. */
-private val LANDSCAPE_CLUSTER_WIDTH = 156.dp
+/** Each control cluster's fixed footprint in [GameControls]'s [MoveDPad]/[RotateCluster] — a
+ *  square 3x3 grid of 48.dp cells with 6.dp gaps, so this one constant is both its width (used to
+ *  keep the landscape layout's centered grid from ever overlapping the clusters beside it) and
+ *  its height (used for landscape's vertical Button Height range); not imported directly since
+ *  those are private constants of a different file's internal layout. */
+private val LANDSCAPE_CLUSTER_SIZE = 156.dp
 
-/** Matches [GameControls]'s private `CELL` — a single button's width at 100% Button Scale. In
- *  landscape, the control clusters sit right against the screen's physical left/right edges,
- *  which on a real device can land right under a camera cutout or the gesture-nav area; insetting
- *  by a full button width (on top of the existing small gap) keeps them clear of either by
- *  default — scaled further by [Settings.landscapeButtonInset] for devices that need more or
+/** Matches [GameControls]'s private `CELL` — a single button's width at 100% Button Scale. Both
+ *  orientations' control clusters sit right against the screen's physical edges by default, which
+ *  on a real device can land right under a camera cutout or the gesture-nav area; insetting by a
+ *  full button width (on top of a small fixed gap) keeps them clear of either — scaled further by
+ *  [Settings.portraitButtonInset]/[Settings.landscapeButtonInset] for devices that need more or
  *  less. */
-private val LANDSCAPE_EDGE_INSET = 48.dp
+private val EDGE_INSET_UNIT = 48.dp
 
 class MainActivity : ComponentActivity() {
     // Activity-level field (not `remember`-ed — a composable can't be reached from
@@ -405,9 +407,16 @@ private fun GameScreen(
             // to the box's extra height. A square box (width == height == the full available
             // height) is what actually makes the rendered well as large as possible with zero
             // dead space top or bottom — landscape has width to spare for this, unlike portrait.
-            val edgeInset = 8.dp + LANDSCAPE_EDGE_INSET * settings.buttonScale * settings.landscapeButtonInset
-            val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH * settings.buttonScale + edgeInset + 8.dp) * 2
+            val edgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.landscapeButtonInset
+            val clusterSize = LANDSCAPE_CLUSTER_SIZE * settings.buttonScale
+            val clusterClearance = (clusterSize + edgeInset + 8.dp) * 2
             val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
+
+            // 0f = top, 1f = bottom, 0.5f = centered (landscape's original fixed behavior, and
+            // still the default) — the clusters' own height caps how far they can travel each way
+            // before running off the top/bottom edge.
+            val verticalRange = ((maxHeight - clusterSize) / 2f).coerceAtLeast(0.dp)
+            val verticalOffset = lerp(-verticalRange, verticalRange, settings.landscapeButtonHeight)
 
             // The grid claims the full container height on its own now — SCORE/LEVEL/CUBES no
             // longer sit in a bar above it (that ate noticeably into how large the well could
@@ -427,10 +436,8 @@ private fun GameScreen(
                 factory = { surfaceView },
             )
 
-            // Button Position only makes sense for portrait's below-the-grid stack; landscape
-            // always centers both clusters vertically in the side margins instead.
-            val leftModifier = Modifier.align(Alignment.CenterStart).padding(horizontal = edgeInset)
-            val rightModifier = Modifier.align(Alignment.CenterEnd).padding(horizontal = edgeInset)
+            val leftModifier = Modifier.align(Alignment.CenterStart).padding(horizontal = edgeInset).offset(y = verticalOffset)
+            val rightModifier = Modifier.align(Alignment.CenterEnd).padding(horizontal = edgeInset).offset(y = verticalOffset)
 
             Column(
                 modifier = Modifier
@@ -501,11 +508,12 @@ private fun GameScreen(
             }
 
             // Default position is right after the grid's bottom edge (plus a small gap), which
-            // keeps controls just clear of it regardless of screen size; the "Button Position"
+            // keeps controls just clear of it regardless of screen size; the "Button Height"
             // setting slides that down towards the bottom edge instead of a fixed guessed position.
             val minSpacerHeight = containerHeight * gridBottomFraction + 12.dp
             val maxSpacerHeight = (containerHeight - 200.dp).coerceAtLeast(minSpacerHeight)
-            val spacerHeight = lerp(minSpacerHeight, maxSpacerHeight, settings.buttonVerticalPosition)
+            val spacerHeight = lerp(minSpacerHeight, maxSpacerHeight, settings.portraitButtonHeight)
+            val portraitEdgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.portraitButtonInset
             Column(modifier = Modifier.fillMaxSize()) {
                 Spacer(Modifier.height(spacerHeight))
                 GameControls(
@@ -519,7 +527,7 @@ private fun GameScreen(
                     scale = settings.buttonScale,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = portraitEdgeInset),
                 )
             }
         }
