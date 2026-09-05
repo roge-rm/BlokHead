@@ -18,8 +18,9 @@ class Tube(x: Int, y: Int, height: Int) {
     var height = 0
         private set
 
-    /** Layers cleared by the most recently locked block. */
+    /** Layers cleared by the most recent [clearLayers] call. */
     var lastDrop = 0
+        private set
 
     private fun index(px: Int, py: Int, pz: Int) = pz * dimensions[0] * dimensions[1] + py * dimensions[0] + px
 
@@ -44,12 +45,17 @@ class Tube(x: Int, y: Int, height: Int) {
             }
         }
         height--
-        lastDrop++
     }
 
-    /** Locks [block] into the grid at its current target position/orientation, then clears any
-     *  full layers it completed. Ported from addBlockToTube(). */
-    fun addBlock(block: Block) {
+    /**
+     * Locks [block]'s cubes into the grid and recomputes [height], but does *not* clear any
+     * newly-completed layers — that's left to a follow-up [clearLayers] call, so a caller (e.g.
+     * GameEngine, for a brief flash animation) can display a completed layer for a moment before
+     * it actually disappears. Returns the world-Z indices of layers the block just completed, in
+     * ascending order. [addBlock] is the original's immediate-clear behavior, for callers that
+     * don't need the gap.
+     */
+    fun placeBlock(block: Block): List<Int> {
         val blockDim = block.dimensions()
         val blockCenter = block.center(blockDim)
         val blockZ = floor(block.position[2] + 0.5f).toInt() + dimensions[2]
@@ -81,7 +87,8 @@ class Tube(x: Int, y: Int, height: Int) {
         }
         height = top + 1
 
-        // Clear any layers the new block completed.
+        // Find (but don't yet clear) any layers the new block completed.
+        val completed = mutableListOf<Int>()
         var z = blockZ - blockCenter[2]
         val zEnd = z + blockDim[2]
         while (z < zEnd && z < dimensions[2]) {
@@ -92,11 +99,27 @@ class Tube(x: Int, y: Int, height: Int) {
                     break@outer
                 }
             }
-            if (full) {
-                removeLayer(z)
-                z--
-            }
+            if (full) completed.add(z)
             z++
         }
+        return completed
+    }
+
+    /** Actually removes the given (ascending, from [placeBlock]) layer indices. Each removal
+     *  shifts every layer above it down by one, so later indices in the same batch are adjusted
+     *  by how many earlier ones have already been removed — equivalent to the original's
+     *  single-pass scan-and-remove, just split into two steps in time. */
+    fun clearLayers(layers: List<Int>) {
+        for ((removedSoFar, originalIndex) in layers.withIndex()) {
+            removeLayer(originalIndex - removedSoFar)
+        }
+        lastDrop = layers.size
+    }
+
+    /** Locks [block] into the grid at its current target position/orientation, then immediately
+     *  clears any full layers it completed. Ported from addBlockToTube(); equivalent to
+     *  [placeBlock] followed immediately by [clearLayers]. */
+    fun addBlock(block: Block) {
+        clearLayers(placeBlock(block))
     }
 }

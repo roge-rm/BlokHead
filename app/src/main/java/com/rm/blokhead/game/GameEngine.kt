@@ -42,6 +42,25 @@ class GameEngine(
     var isPaused: Boolean = false
         private set
 
+    /** World-Z layer indices currently flashing before they're cleared (see [update]); empty
+     *  the rest of the time. The renderer uses this to highlight them instead of drawing the
+     *  falling piece. */
+    var pendingClearLayers: List<Int> = emptyList()
+        private set
+
+    /** 0f right when a layer clear starts, 1f right as it finishes — for the renderer to fade/
+     *  pulse the flash. Meaningless (and unused) while [pendingClearLayers] is empty. */
+    var clearFlashProgress: Float = 0f
+        private set
+
+    private var clearTimeRemaining = 0f
+
+    /** True while input should be a no-op: game over, paused, or a completed layer is flashing
+     *  (during which [currentBlock] is a stale reference — it already merged into the tube, and
+     *  the next piece hasn't spawned — so acting on it would be meaningless). */
+    private val isFrozen: Boolean
+        get() = isGameOver || isPaused || pendingClearLayers.isNotEmpty()
+
     private var levelFactor: Float = levelFactorFor(startLevel)
     private var elapsedSinceSpawn: Float = 0f
 
@@ -51,6 +70,10 @@ class GameEngine(
     init {
         spawnBlock()
     }
+
+    /** How long a completed layer flashes before it's actually removed. Kept short so a clear
+     *  doesn't interrupt the pace of play. */
+    private val clearFlashDuration = 0.1f
 
     private fun levelFactorFor(level: Int): Float = if (level < 5) level / 5f else level - 5f
 
@@ -70,6 +93,12 @@ class GameEngine(
     /** Advances the game by [deltaSeconds]. Call this from the render/game loop each frame. */
     fun update(deltaSeconds: Float) {
         if (isGameOver || isPaused) return
+        if (pendingClearLayers.isNotEmpty()) {
+            clearTimeRemaining -= deltaSeconds
+            clearFlashProgress = (1f - clearTimeRemaining / clearFlashDuration).coerceIn(0f, 1f)
+            if (clearTimeRemaining <= 0f) finishClearingLayers()
+            return // freeze the piece/spawn while a completed layer is flashing
+        }
         elapsedSinceSpawn += deltaSeconds
         currentBlock.update(elapsedSinceSpawn)
         Collision.tryLowerBlock(tube, currentBlock, elapsedSinceSpawn)
@@ -84,18 +113,18 @@ class GameEngine(
     fun moveBackward() = tryMove(Axis.Y, -1)
 
     fun rotate(axis: Int, sign: Int) {
-        if (isGameOver || isPaused) return
+        if (isFrozen) return
         Collision.tryTurnBlock(tube, currentBlock, axis, sign, elapsedSinceSpawn)
     }
 
     private fun tryMove(axis: Int, sign: Int) {
-        if (isGameOver || isPaused) return
+        if (isFrozen) return
         Collision.tryMoveBlock(tube, currentBlock, axis, sign, elapsedSinceSpawn)
     }
 
     /** Instantly speeds up the fall, ported from the space-bar handler in control.c. */
     fun hardDrop() {
-        if (isGameOver || isPaused) return
+        if (isFrozen) return
         currentBlock.lastStop = elapsedSinceSpawn
         currentBlock.stopHeight = currentBlock.position[2]
         currentBlock.fallSpeed = tube.dimensions[2] / 2f
@@ -111,6 +140,9 @@ class GameEngine(
         levelFactor = levelFactorFor(startLevel)
         isGameOver = false
         isPaused = false
+        pendingClearLayers = emptyList()
+        clearFlashProgress = 0f
+        clearTimeRemaining = 0f
         spawnBlock()
     }
 
@@ -118,9 +150,9 @@ class GameEngine(
         val lockedBlock = currentBlock
         val timeNow = elapsedSinceSpawn
 
-        tube.addBlock(lockedBlock)
+        val completedLayers = tube.placeBlock(lockedBlock)
         cubesDropped += lockedBlock.form.numCubes
-        levelsDescended += tube.lastDrop
+        levelsDescended += completedLayers.size
 
         val newLevel = cubesDropped / 70
         if (level < 10 && level < newLevel) {
@@ -128,12 +160,30 @@ class GameEngine(
             levelFactor = levelFactorFor(level)
         }
 
-        val moveScore = (levelFactor * timeNow * 200 * 2.0.pow(tube.lastDrop) * lockedBlock.fallSpeed) /
-            (tube.dimensions[2] - tube.height)
+        // tube.height reflects placement before any clearing; each cleared layer will drop it by
+        // exactly one, so the post-clear height the original scored against is computed rather
+        // than performed early — the actual clear (and the height change) waits for the flash.
+        val postClearHeight = tube.height - completedLayers.size
+        val moveScore = (levelFactor * timeNow * 200 * 2.0.pow(completedLayers.size) * lockedBlock.fallSpeed) /
+            (tube.dimensions[2] - postClearHeight)
         score += (moveScore + 0.5).toInt()
 
-        tube.lastDrop = 0
+        if (completedLayers.isEmpty()) {
+            advanceAfterLock()
+        } else {
+            pendingClearLayers = completedLayers
+            clearFlashProgress = 0f
+            clearTimeRemaining = clearFlashDuration
+        }
+    }
 
+    private fun finishClearingLayers() {
+        tube.clearLayers(pendingClearLayers)
+        pendingClearLayers = emptyList()
+        advanceAfterLock()
+    }
+
+    private fun advanceAfterLock() {
         if (tube.height < tube.dimensions[2] - 5) {
             spawnBlock()
         } else {

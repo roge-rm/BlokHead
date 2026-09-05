@@ -91,7 +91,12 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
         drawWellGrid()
         drawLockedCubes()
-        drawFallingBlock()
+        // While a completed layer is flashing (see GameEngine.pendingClearLayers), the piece
+        // that just locked has already merged into the tube's cubes above, and the next one
+        // hasn't spawned yet — nothing to draw as a separate falling piece.
+        if (engine.pendingClearLayers.isEmpty()) {
+            drawFallingBlock()
+        }
     }
 
     private fun setUpCamera() {
@@ -162,9 +167,11 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
     private fun drawLockedCubes() {
         val tube = engine.tube
+        val flashingLayers = engine.pendingClearLayers
+        val flashProgress = engine.clearFlashProgress
         val vertices = ArrayList<Float>()
         for (z in 0 until tube.dimensions[2]) {
-            val color = colorForLayer(z)
+            val color = if (z in flashingLayers) flashColor(colorForLayer(z), flashProgress) else colorForLayer(z)
             for (y in 0 until tube.dimensions[1]) for (x in 0 until tube.dimensions[0]) {
                 if (tube.isFilled(x, y, z)) {
                     Geometry.appendCube(vertices, floatArrayOf(x.toFloat(), y.toFloat(), z.toFloat()), color)
@@ -228,6 +235,18 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
         val hue = (z * 47) % 360
         return hsvToRgba(hue.toFloat(), 0.55f, 0.85f)
     }
+
+    /** A completed layer flashes bright white the instant it completes, then eases back toward
+     *  its normal color over [progress] (0f..1f) right up until it's actually removed — a quick
+     *  "flash, then reveal-and-vanish" rather than a flat highlight for the whole duration. */
+    private fun flashColor(base: FloatArray, progress: Float): FloatArray = floatArrayOf(
+        lerp(1f, base[0], progress),
+        lerp(1f, base[1], progress),
+        lerp(1f, base[2], progress),
+        1f,
+    )
+
+    private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 }
 
 private fun hsvToRgba(h: Float, s: Float, v: Float): FloatArray {

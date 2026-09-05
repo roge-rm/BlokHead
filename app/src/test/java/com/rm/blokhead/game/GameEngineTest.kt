@@ -92,4 +92,53 @@ class GameEngineTest {
         }
         assertEquals(1, engine.cubesDropped)
     }
+
+    private fun dropAndSettle(engine: GameEngine, expectedCubesDropped: Int) {
+        engine.hardDrop()
+        var ticks = 0
+        while (engine.cubesDropped < expectedCubesDropped && ticks < 1000) {
+            engine.update(0.05f)
+            ticks++
+        }
+    }
+
+    @Test
+    fun `a completed layer flashes for a moment before it actually clears`() {
+        // Width 2: fill column 0, then move to column 1 and fill it too, completing the bottom
+        // layer on the second lock.
+        val engine = GameEngine(forms = cubeOnly, width = 2, depth = 1, height = 6, random = Random(0))
+        dropAndSettle(engine, expectedCubesDropped = 1)
+        assertTrue(engine.pendingClearLayers.isEmpty()) // no clear yet, column 1 still empty
+
+        engine.moveRight()
+        engine.update(1f) // finish the move animation before dropping again
+        dropAndSettle(engine, expectedCubesDropped = 2)
+
+        // The layer is complete, but should still be flashing, not yet actually removed.
+        assertTrue(engine.pendingClearLayers.isNotEmpty())
+        val heightWhileFlashing = engine.tube.height
+
+        // Advance well past the flash duration.
+        repeat(20) { engine.update(0.05f) }
+
+        assertTrue(engine.pendingClearLayers.isEmpty())
+        assertTrue(engine.tube.height < heightWhileFlashing)
+    }
+
+    @Test
+    fun `input is ignored while a completed layer is flashing`() {
+        val engine = GameEngine(forms = cubeOnly, width = 2, depth = 1, height = 6, random = Random(0))
+        dropAndSettle(engine, expectedCubesDropped = 1)
+        engine.moveRight()
+        engine.update(1f)
+        dropAndSettle(engine, expectedCubesDropped = 2)
+        assertTrue(engine.pendingClearLayers.isNotEmpty())
+
+        val frozenTargetX = engine.currentBlock.targetPosition[0]
+        engine.moveLeft()
+        engine.rotate(Axis.X, 1)
+        engine.hardDrop()
+        assertEquals(frozenTargetX, engine.currentBlock.targetPosition[0])
+        assertEquals(2, engine.cubesDropped) // hardDrop() during the flash must not lock anything
+    }
 }
