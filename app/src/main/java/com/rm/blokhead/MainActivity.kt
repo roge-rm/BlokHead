@@ -354,8 +354,16 @@ private fun GameScreen(
             // Column-with-spacer layout below, not a tweak of the same formula, since portrait's
             // aspect/spacer math assumes a container taller than it is wide and produces
             // negative/invalid values once it isn't.
+            // The well's near opening is square (footprint width == depth), and the renderer's
+            // camera always projects it as a square image whose rendered size equals
+            // min(box width, box height) — handing it a box taller than it is wide (as an
+            // earlier version of this code did, matching the device's own portrait aspect)
+            // doesn't make that square any bigger, it just adds unused margin above/below equal
+            // to the box's extra height. A square box (width == height == the full available
+            // height) is what actually makes the rendered well as large as possible with zero
+            // dead space top or bottom — landscape has width to spare for this, unlike portrait.
             val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH * settings.buttonScale + 16.dp) * 2
-            val gridWidth = minOf(maxHeight * 0.6f, maxWidth - clusterClearance).coerceAtLeast(0.dp)
+            val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
             // The grid claims the full container height on its own now — SCORE/LEVEL/CUBES no
             // longer sit in a bar above it (that ate noticeably into how large the well could
