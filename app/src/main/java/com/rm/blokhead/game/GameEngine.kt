@@ -23,7 +23,7 @@ class GameEngine(
     private val startLevel: Int = 2,
     private val width: Int = 5,
     private val depth: Int = 5,
-    private val height: Int = 12,
+    private val height: Int = 16,
     private val random: Random = Random.Default,
 ) {
     var tube: Tube = Tube(width, depth, height)

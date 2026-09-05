@@ -10,6 +10,8 @@ import java.nio.FloatBuffer
 import java.util.concurrent.ConcurrentLinkedQueue
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
+import kotlin.math.atan
+import kotlin.math.tan
 
 /**
  * GLES2 replacement for the original's fixed-function OpenGL 1.x rendering (transforms.c,
@@ -98,15 +100,24 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
         val depth = tube.dimensions[1].toFloat()
         val height = tube.dimensions[2].toFloat()
         val aspect = viewportWidth.toFloat() / viewportHeight.toFloat()
-        // A piece spawns right at the well's top opening, so the eye needs real standoff above it
-        // — otherwise a freshly spawned piece sits well under one world unit from the camera and
-        // fills the whole frame. This margin scales with the footprint so it stays proportional
-        // for a wider/narrower well.
-        val standoff = maxOf(width, depth) * 3f
+        // Distance from the eye to the well's top opening. Closer means a freshly spawned piece
+        // starts as a larger part of the view (and the near opening's angular size is bigger for
+        // a given FOV) — this scales with the footprint so it stays proportional for a
+        // wider/narrower well.
+        val standoff = maxOf(width, depth) * 1.5f
         standoffAboveTop = standoff
         val eyeZ = height + standoff
 
-        Matrix.perspectiveM(projectionMatrix, 0, 55f, aspect, 0.5f, eyeZ + 5f)
+        // Pick the vertical FOV so the well's near opening spans the full viewport *width* —
+        // i.e. the walls run edge-to-edge at the top of the tunnel — by solving for the fovy
+        // that gives exactly that horizontal half-angle at this aspect ratio. The screen is
+        // portrait (taller than it is wide), so this leaves extra vertical FOV beyond that,
+        // which reveals more of the tunnel's depth rather than cropping its sides.
+        val nearHalfWidth = maxOf(width, depth) / 2f
+        val horizontalHalfAngle = atan(nearHalfWidth / standoff)
+        val fovY = Math.toDegrees(2.0 * atan(tan(horizontalHalfAngle) / aspect)).toFloat()
+
+        Matrix.perspectiveM(projectionMatrix, 0, fovY, aspect, 0.5f, eyeZ + 5f)
 
         val cx = width / 2f
         val cy = depth / 2f
