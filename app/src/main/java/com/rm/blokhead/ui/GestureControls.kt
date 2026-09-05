@@ -61,22 +61,21 @@ private fun fireSteps(accumulated: Float, stepSize: Float, onStep: (sign: Int) -
  *   buttons), vertical pan → X (matches its vertical X buttons).
  * - Two-finger twist rotates Z — the "secondary" axis gets the "secondary" gesture, mirroring the
  *   existing button/gamepad hierarchy (X/Y on the primary reachable inputs, Z on a secondary one).
- * - A plain tap toggles pause, same as the button scheme's tap-to-pause; a long-press (cancelled
- *   by any movement past touch slop, or by a second finger joining — exactly like a normal
- *   Android long-press) hard-drops instead. Long-press was chosen over double-tap so there's no
- *   delayed "was that a single or double tap?" resolution racing against the pause toggle.
+ * - A long-press (cancelled by any movement past touch slop, or by a second finger joining —
+ *   exactly like a normal Android long-press) hard-drops. A plain tap does nothing here — pause
+ *   lives outside the grid entirely, on the black border area a caller composes around this
+ *   modifier's surface (see `GameScreen`), since a tap-to-pause on the grid itself would fight
+ *   with move/long-press over the same touch.
  *
- * Every callback here is one of `GameScreen`'s existing move/rotate/hard-drop/pause lambdas —
- * this modifier only detects gestures and translates them into those same calls; the underlying
+ * Every callback here is one of `GameScreen`'s existing move/rotate/hard-drop lambdas — this
+ * modifier only detects gestures and translates them into those same calls; the underlying
  * `GameEngine` already no-ops all of them while paused/game-over, so nothing here needs to check
- * that itself (except [onTogglePause], which decides on its own whether pausing still means
- * anything).
+ * that itself.
  */
 fun Modifier.gestureControls(
     onMove: (axis: Int, sign: Int) -> Unit,
     onRotate: (axis: Int, sign: Int) -> Unit,
     onHardDrop: () -> Unit,
-    onTogglePause: () -> Unit,
 ): Modifier = pointerInput(Unit) {
     val moveStepPx = MOVE_STEP.toPx()
     val rotatePanStepPx = ROTATE_PAN_STEP.toPx()
@@ -160,7 +159,7 @@ fun Modifier.gestureControls(
             }
             val pressed = event.changes.filter { it.pressed }
             if (pressed.isEmpty()) {
-                onTogglePause()
+                // A plain tap on the grid — deliberately a no-op (see the doc comment above).
                 return@awaitEachGesture
             }
             lastEventUptime = pressed.maxOf { it.uptimeMillis }

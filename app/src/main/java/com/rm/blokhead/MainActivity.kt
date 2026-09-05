@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -438,7 +439,6 @@ private fun GameScreen(
                                 onMove = onMove,
                                 onRotate = onRotateAction,
                                 onHardDrop = onHardDropAction,
-                                onTogglePause = onTogglePause,
                             )
                         } else {
                             base.pointerInput(engine) { detectTapGestures { onTogglePause() } }
@@ -446,6 +446,27 @@ private fun GameScreen(
                     },
                 factory = { surfaceView },
             )
+
+            // Gesture mode: a tap on the grid itself does nothing (it's move/rotate/drop
+            // territory) — pause instead lives on the pillarbox side margins, the only "black
+            // border" area landscape has, one tap-catcher per side since the grid sits centered.
+            if (settings.gestureControlsEnabled) {
+                val marginWidth = ((maxWidth - gridWidth) / 2f).coerceAtLeast(0.dp)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .width(marginWidth)
+                        .fillMaxHeight()
+                        .pointerInput(engine) { detectTapGestures { onTogglePause() } },
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(marginWidth)
+                        .fillMaxHeight()
+                        .pointerInput(engine) { detectTapGestures { onTogglePause() } },
+                )
+            }
 
             val leftModifier = Modifier.align(Alignment.CenterStart).padding(horizontal = edgeInset).offset(y = verticalOffset)
             val rightModifier = Modifier.align(Alignment.CenterEnd).padding(horizontal = edgeInset).offset(y = verticalOffset)
@@ -500,7 +521,6 @@ private fun GameScreen(
                                 onMove = onMove,
                                 onRotate = onRotateAction,
                                 onHardDrop = onHardDropAction,
-                                onTogglePause = onTogglePause,
                             )
                         } else {
                             base
@@ -523,8 +543,6 @@ private fun GameScreen(
             // Tapping anywhere above the grid (the HUD's band included) pauses/unpauses — placed
             // before the controls/overlays below so it never steals taps meant for them, and it's
             // a no-op once the game has ended (pausing a finished game doesn't mean anything).
-            // Only needed in button mode: in gesture mode the grid's own AndroidView above already
-            // covers the full screen (including this margin, visually) with the richer modifier.
             if (!hud.isGameOver && !settings.gestureControlsEnabled) {
                 Spacer(
                     modifier = Modifier
@@ -533,6 +551,26 @@ private fun GameScreen(
                         .pointerInput(engine) {
                             detectTapGestures { onTogglePause() }
                         },
+                )
+            }
+
+            // Gesture mode: a tap on the grid itself does nothing (see gestureControls' own doc
+            // comment) — pause instead lives on the black border above/below the grid, the only
+            // margin portrait has (the rendered content already fills the full width).
+            if (settings.gestureControlsEnabled) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .height(gridTopHeight)
+                        .pointerInput(engine) { detectTapGestures { onTogglePause() } },
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(gridTopHeight)
+                        .pointerInput(engine) { detectTapGestures { onTogglePause() } },
                 )
             }
 
