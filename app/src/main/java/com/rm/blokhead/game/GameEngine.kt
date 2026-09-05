@@ -122,12 +122,18 @@ class GameEngine(
         Collision.tryMoveBlock(tube, currentBlock, axis, sign, elapsedSinceSpawn)
     }
 
-    /** Instantly speeds up the fall, ported from the space-bar handler in control.c. */
+    /** Instantly speeds up the fall, ported from the space-bar handler in control.c. Doubled
+     *  from the original's `dimensions[2] / 2f` (falls the whole well in ~2s) to `dimensions[2]`
+     *  (~1s) — falls twice as fast now. Since the locking score formula is directly proportional
+     *  to fallSpeed at the moment of lock (see lockCurrentBlockAndAdvance()'s moveScore), a
+     *  hard-dropped piece now also scores about twice as much as before — an intentional
+     *  side effect of the same speed-rewards-score design already in place, not a separate
+     *  scoring change. */
     fun hardDrop() {
         if (isFrozen) return
         currentBlock.lastStop = elapsedSinceSpawn
         currentBlock.stopHeight = currentBlock.position[2]
-        currentBlock.fallSpeed = tube.dimensions[2] / 2f
+        currentBlock.fallSpeed = tube.dimensions[2].toFloat()
     }
 
     /** Resets the game to a fresh well and starting score/level, for a "play again" flow. */
