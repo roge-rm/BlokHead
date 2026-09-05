@@ -49,22 +49,40 @@ private fun MoveDPad(onMove: (axis: Int, sign: Int) -> Unit) {
     }
 }
 
+/** Rotate cluster laid out as a 3x3 grid: X/Y sit where a D-pad would put left/right/up/down,
+ *  and the two Z rotations fill the opposite diagonal corners.
+ *
+ *  ```
+ *      Y+ Z+
+ *  X-      X+
+ *  Z- Y-
+ *  ```
+ */
 @Composable
 private fun RotateCluster(onRotate: (axis: Int, sign: Int) -> Unit) {
+    val cell = 40.dp
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        AxisRotateRow("X", Axis.X, onRotate)
-        AxisRotateRow("Y", Axis.Y, onRotate)
-        AxisRotateRow("Z", Axis.Z, onRotate)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RotateSpacer(cell)
+            RoundButton("Y+", size = cell) { onRotate(Axis.Y, 1) }
+            RoundButton("Z+", size = cell) { onRotate(Axis.Z, 1) }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RoundButton("X−", size = cell) { onRotate(Axis.X, -1) }
+            RotateSpacer(cell)
+            RoundButton("X+", size = cell) { onRotate(Axis.X, 1) }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RoundButton("Z−", size = cell) { onRotate(Axis.Z, -1) }
+            RoundButton("Y−", size = cell) { onRotate(Axis.Y, -1) }
+            RotateSpacer(cell)
+        }
     }
 }
 
 @Composable
-private fun AxisRotateRow(label: String, axis: Int, onRotate: (axis: Int, sign: Int) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        RoundButton("$label−", size = 40.dp) { onRotate(axis, -1) }
-        Spacer()
-        RoundButton("$label+", size = 40.dp) { onRotate(axis, 1) }
-    }
+private fun RotateSpacer(size: androidx.compose.ui.unit.Dp) {
+    androidx.compose.foundation.layout.Spacer(Modifier.size(size))
 }
 
 @Composable
