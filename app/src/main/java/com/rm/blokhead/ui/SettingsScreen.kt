@@ -99,7 +99,7 @@ fun SettingsScreen(
             checked = settings.leftHandedMode,
             onCheckedChange = { onSettingsChange(settings.copy(leftHandedMode = it)) },
         )
-        SectionLabel("Button Position")
+        SectionLabel("Button Position (Portrait Only)")
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Below Grid", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text("Bottom Edge", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -107,6 +107,17 @@ fun SettingsScreen(
         Slider(
             value = settings.buttonVerticalPosition,
             onValueChange = { onSettingsChange(settings.copy(buttonVerticalPosition = it)) },
+        )
+        PercentSliderRow(
+            title = "Button Edge Inset (Landscape Only)",
+            // How far the clusters (and SCORE/LEVEL/CUBES above them) sit from the screen's
+            // physical left/right edges, in multiples of one button's width on top of a small
+            // fixed gap — see MainActivity.kt's edgeInset. Wide enough range to clear a camera
+            // cutout or gesture-nav area of practically any real size without needing a cap tied
+            // to Button Scale the way the position slider above is.
+            value = settings.landscapeButtonInset,
+            range = 0f..2f,
+            onValueChange = { onSettingsChange(settings.copy(landscapeButtonInset = it)) },
         )
         PercentSliderRow(
             title = "Button Scale",
