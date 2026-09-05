@@ -1,21 +1,28 @@
 package com.rm.blokhead.ui
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rm.blokhead.game.Axis
@@ -161,20 +168,46 @@ private fun RoundButton(
     colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
     onClick: () -> Unit,
 ) {
-    FilledTonalButton(
-        onClick = onClick,
+    // A plain Surface + manual tap detection, not Button/FilledTonalButton's built-in
+    // Modifier.clickable — that fires onClick on release (ACTION_UP), adding a full press-and-
+    // release delay before a move/rotate/drop registers. This game is about reaction speed, so
+    // onPress (fired the instant a pointer goes down) is used instead; `pressed` just drives a
+    // darkened overlay for the same on-screen feedback clickable's ripple would have given.
+    var pressed by remember { mutableStateOf(false) }
+    Surface(
         shape = CircleShape,
-        colors = colors,
-        contentPadding = PaddingValues(0.dp),
+        color = colors.containerColor,
+        contentColor = colors.contentColor,
         // requiredSize, not size: if a row runs short on width (e.g. Button Scale pushed a
         // cluster wider than its share of the screen), `size()` lets the incoming width
         // constraint override the requested one while height stays unconstrained — squishing
         // the button into a horizontal oval instead of clipping it. requiredSize keeps every
         // button a true circle no matter what the parent offers, even if that means part of a
         // cluster runs off the edge.
-        modifier = Modifier.requiredSize(size),
+        modifier = Modifier
+            .requiredSize(size)
+            .pointerInput(onClick) {
+                detectTapGestures(
+                    onPress = {
+                        pressed = true
+                        onClick()
+                        try {
+                            awaitRelease()
+                        } finally {
+                            pressed = false
+                        }
+                    },
+                )
+            },
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (pressed) 0.7f else 1f),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+        }
     }
 }
 
