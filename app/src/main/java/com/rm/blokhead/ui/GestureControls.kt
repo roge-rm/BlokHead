@@ -16,26 +16,27 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Two-finger pan distance (in dp) that fires a single X/Y rotate once a gesture has committed to
- *  panning (see [ROTATE_PAN_COMMIT]/[ROTATE_TWIST_COMMIT_DEGREES]) — a fixed size (unlike move's
- *  per-cell [gestureControls] parameter) since there's no equivalent on-screen "one rotate step"
- *  distance to match; needs to be deliberately large so a two-finger gesture doesn't spin the
- *  piece many times over from an ordinary amount of hand movement. */
-private val ROTATE_PAN_STEP = 56.dp
+/** Each in-game rotate step turns the piece a quarter turn — so a two-finger *twist* fires one
+ *  rotate per 90° the fingers themselves have physically twisted, the same direct real-world
+ *  correspondence [gestureControls]' `cellSize` gives one-finger move: twist your fingers a
+ *  quarter turn, the piece turns a quarter turn, at whatever speed you actually twisted at. */
+private const val ROTATE_TWIST_STEP_DEGREES = 90f
 
-/** Two-finger twist angle (in degrees) that fires a single Z rotate once a gesture has committed
- *  to twisting — likewise sized so a natural twist yields just a couple of steps, not a dozen. */
-private const val ROTATE_TWIST_STEP_DEGREES = 35f
+/** Two-finger *pan* (translation, not twist) fires X/Y rotates instead of Z — there's no rotation
+ *  angle to match 1:1 here since panning isn't a rotation gesture, so it reuses the same
+ *  real-world [gestureControls] `cellSize` unit move already does (one cell of pan = one rotate),
+ *  rather than a distance disconnected from anything else on screen. */
+private const val ROTATE_PAN_STEP_CELLS = 1f
 
 /** How far a two-finger gesture's pan/twist has to travel before it *commits* to being a pan or
- *  a twist gesture for the rest of that gesture (whichever crosses its own threshold first) —
- *  much smaller than the step sizes above, just enough to tell intent apart. Once committed, the
- *  other axis is ignored entirely: without this, an imprecise real-world twist (which naturally
- *  drifts the centroid a little) or an imprecise pan (which naturally rotates the finger pair a
- *  little) would fire both X/Y *and* Z rotates from the same motion, compounding into the piece
- *  spinning far more than intended. */
-private val ROTATE_PAN_COMMIT = 16.dp
-private const val ROTATE_TWIST_COMMIT_DEGREES = 12f
+ *  a twist gesture for the rest of that gesture (whichever crosses its own threshold first) — a
+ *  quarter of each's full step, just enough to tell intent apart well before either could
+ *  actually fire. Once committed, the other axis is ignored entirely: without this, an imprecise
+ *  real-world twist (which naturally drifts the centroid a little) or an imprecise pan (which
+ *  naturally rotates the finger pair a little) would fire both X/Y *and* Z rotates from the same
+ *  motion, compounding into the piece spinning far more than intended. */
+private const val ROTATE_PAN_COMMIT_CELLS = ROTATE_PAN_STEP_CELLS / 4f
+private const val ROTATE_TWIST_COMMIT_DEGREES = ROTATE_TWIST_STEP_DEGREES / 4f
 
 private fun centroidAndAngleDegrees(a: Offset, b: Offset): Pair<Offset, Float> {
     val centroid = Offset((a.x + b.x) / 2f, (a.y + b.y) / 2f)
@@ -61,10 +62,14 @@ private fun fireSteps(accumulated: Float, stepSize: Float, onStep: (sign: Int) -
  *   one square, however fast or slow that drag happens. There's deliberately no other notion of
  *   "speed" or acceleration beyond that direct correspondence — a fast flick just crosses more
  *   cell-widths in the same real time, exactly as many as it visually crossed.
- * - Two-finger drag rotates X/Y — horizontal pan → Y (matches [RotateCluster]'s horizontal Y
- *   buttons), vertical pan → X (matches its vertical X buttons).
- * - Two-finger twist rotates Z — the "secondary" axis gets the "secondary" gesture, mirroring the
- *   existing button/gamepad hierarchy (X/Y on the primary reachable inputs, Z on a secondary one).
+ * - Two-finger drag rotates X/Y, one quarter turn per [cellSize] of pan (reusing move's own real
+ *   unit rather than an unrelated fixed distance) — horizontal pan → Y (matches [RotateCluster]'s
+ *   horizontal Y buttons), vertical pan → X (matches its vertical X buttons).
+ * - Two-finger twist rotates Z, one quarter turn per 90° the fingers themselves twist — the same
+ *   direct real-world correspondence as move/pan, just in angle instead of distance since a twist
+ *   is a rotation gesture already. Twist gets the "secondary" axis (Z) rather than pan, mirroring
+ *   the existing button/gamepad hierarchy (X/Y on the primary reachable inputs, Z on a secondary
+ *   one).
  * - A long-press (cancelled by any movement past touch slop, or by a second finger joining —
  *   exactly like a normal Android long-press) hard-drops. A plain tap toggles pause only if it
  *   started in the black border area not covered by the rendered grid (per [isInPauseZone]) — a
@@ -92,8 +97,8 @@ fun Modifier.gestureControls(
     onTogglePause: () -> Unit = {},
 ): Modifier = pointerInput(Unit) {
     val moveStepPx = cellSize.toPx()
-    val rotatePanStepPx = ROTATE_PAN_STEP.toPx()
-    val rotatePanCommitPx = ROTATE_PAN_COMMIT.toPx()
+    val rotatePanStepPx = moveStepPx * ROTATE_PAN_STEP_CELLS
+    val rotatePanCommitPx = moveStepPx * ROTATE_PAN_COMMIT_CELLS
 
     // Two (or more) fingers down: interpret the pinch centroid's pan as X/Y rotate and the pair's
     // angle as a Z twist, for as long as at least 2 fingers stay down. A gesture commits to
