@@ -440,6 +440,11 @@ private fun GameScreen(
                                 onMove = onMove,
                                 onRotate = onRotateAction,
                                 onHardDrop = onHardDropAction,
+                                // The rendered well is `settings.wellSize` cells across this same
+                                // gridWidth, so one physical cell's on-screen width is the natural
+                                // "how far is one move" distance — matching what the player
+                                // actually sees, not an arbitrary fixed distance.
+                                cellSize = gridWidth / settings.wellSize,
                             )
                         } else {
                             base.pointerInput(engine) { detectTapGestures { onTogglePause() } }
@@ -542,6 +547,10 @@ private fun GameScreen(
                                 onMove = onMove,
                                 onRotate = onRotateAction,
                                 onHardDrop = onHardDropAction,
+                                // The rendered grid fills the full screen width here (see the
+                                // camera comment above), so that's the pixel width to divide by
+                                // wellSize for one cell's actual on-screen size.
+                                cellSize = maxWidth / settings.wellSize,
                                 isInPauseZone = { pos -> pos.y < gridTopHeightPx || pos.y > gridBottomYPx },
                                 onTogglePause = onTogglePause,
                             )
