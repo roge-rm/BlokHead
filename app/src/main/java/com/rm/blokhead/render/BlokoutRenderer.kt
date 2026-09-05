@@ -3,6 +3,7 @@ package com.rm.blokhead.render
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import androidx.compose.ui.graphics.Color
 import com.rm.blokhead.game.GameEngine
 import com.rm.blokhead.game.Tube
 import java.nio.ByteBuffer
@@ -30,6 +31,12 @@ import kotlin.math.tan
  * frame and advances [engine] by that delta before rendering, since GLSurfaceView's continuous
  * render mode already gives us a steady per-frame callback.
  */
+/** The GL surface's clear color, exposed as a Compose [Color] so the landscape layout can paint
+ *  the pillarbox margins around the well the exact same shade — otherwise they'd default to
+ *  [androidx.compose.material3.ColorScheme.background], which is light in light theme and
+ *  wouldn't read as the intended dark margin regardless of system theme. */
+val wellBackgroundColor: Color = Color(red = 0.03f, green = 0.04f, blue = 0.045f)
+
 class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
     private lateinit var shader: ShaderProgram
@@ -62,7 +69,7 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-        GLES20.glClearColor(0.03f, 0.04f, 0.045f, 1f)
+        GLES20.glClearColor(wellBackgroundColor.red, wellBackgroundColor.green, wellBackgroundColor.blue, 1f)
         GLES20.glEnable(GLES20.GL_DEPTH_TEST)
         GLES20.glEnable(GLES20.GL_BLEND)
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA)
