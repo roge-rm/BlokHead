@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Surface
@@ -63,6 +64,7 @@ import com.rm.blokhead.render.wellBackgroundColor
 import com.rm.blokhead.ui.AppScreen
 import com.rm.blokhead.ui.GameControls
 import com.rm.blokhead.ui.GameHud
+import com.rm.blokhead.ui.HudStat
 import com.rm.blokhead.ui.GameOverOverlay
 import com.rm.blokhead.ui.GamepadBindingsScreen
 import com.rm.blokhead.ui.HighScoreScreen
@@ -355,35 +357,46 @@ private fun GameScreen(
             val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH * settings.buttonScale + 16.dp) * 2
             val gridWidth = minOf(maxHeight * 0.6f, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
-            Column(
+            // The grid claims the full container height on its own now — SCORE/LEVEL/CUBES no
+            // longer sit in a bar above it (that ate noticeably into how large the well could
+            // render); they're laid out below instead, tucked into the side margins' otherwise
+            // unused space above the vertically-centered control clusters. With no HUD bar left
+            // to tap, the grid itself is the pause target.
+            AndroidView(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .width(gridWidth)
-                    .fillMaxHeight(),
-            ) {
-                // No large empty "above the grid" band exists once the grid fills most of the
-                // height, so landscape's pause-tap target is just the HUD bar itself — smaller
-                // than portrait's, but always present and discoverable.
-                GameHud(
-                    snapshot = hud,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerInput(engine) {
-                            detectTapGestures {
-                                if (!hud.isGameOver) surfaceView.enqueue { setPaused(!isPaused) }
-                            }
-                        },
-                )
-                AndroidView(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    factory = { surfaceView },
-                )
-            }
+                    .fillMaxHeight()
+                    .pointerInput(engine) {
+                        detectTapGestures {
+                            if (!hud.isGameOver) surfaceView.enqueue { setPaused(!isPaused) }
+                        }
+                    },
+                factory = { surfaceView },
+            )
 
             // Button Position only makes sense for portrait's below-the-grid stack; landscape
             // always centers both clusters vertically in the side margins instead.
             val leftModifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 8.dp)
             val rightModifier = Modifier.align(Alignment.CenterEnd).padding(horizontal = 8.dp)
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            ) {
+                HudStat("SCORE", hud.score.toString())
+            }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+            ) {
+                HudStat("LEVEL", hud.level.toString())
+                HudStat("CUBES", hud.cubesDropped.toString(), modifier = Modifier.padding(top = 8.dp))
+            }
             if (settings.leftHandedMode) {
                 RotateCluster(onRotate = onRotateAction, modifier = leftModifier, scale = settings.buttonScale)
                 MoveDPad(
