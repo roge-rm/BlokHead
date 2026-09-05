@@ -7,10 +7,12 @@ class TubeTest {
 
     private val cubeForm = FormCatalog.allForms[0] // 1x1x1
 
-    /** Simulates a hard drop: lets the block fall under gravity until it rests. */
+    /** Simulates a hard drop: lets the block fall under gravity until it rests. Starts `t` past
+     *  zero so the first call has nonzero elapsed time relative to the block's initial lastStop
+     *  (0f) — matching every real frame, which always advances time before checking gravity. */
     private fun dropToBottom(tube: Tube, block: Block) {
         block.fallSpeed = tube.dimensions[2].toFloat()
-        var t = 0f
+        var t = 0.1f
         while (Collision.tryLowerBlock(tube, block, t)) {
             t += 0.1f
         }

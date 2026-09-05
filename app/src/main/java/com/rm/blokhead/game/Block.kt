@@ -25,7 +25,16 @@ class Block(val form: Form, fallSpeed: Float = 0.1f) {
 
     var lastFall = 0f
     var lastStop = 0f
-    var stopHeight = -5f
+
+    // The original starts this at -5 (see blocks.c's createBlock()) as a "fast catch-up" hack:
+    // tryLowerBlock's very first call jumps position[2] straight to this value before normal
+    // per-frame fall speed takes over, saving a slow fall through a very tall well before the
+    // piece is even visible. Our wells are much shallower, so that same fixed jump eats a much
+    // bigger fraction of the visible depth — the piece would visibly start already partway down
+    // the tunnel instead of at its front opening. Starting at 0 (matching position[2]) instead
+    // makes the very first fall tick behave like every other: a smooth, continuous descent from
+    // the spawn point.
+    var stopHeight = 0f
 
     var fallSpeed = fallSpeed
     var moveSpeed = 2f
