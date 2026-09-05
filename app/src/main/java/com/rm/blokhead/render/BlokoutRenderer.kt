@@ -38,6 +38,7 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
     private var viewportWidth = 1
     private var viewportHeight = 1
     private var lastFrameTimeNanos = 0L
+    private var standoffAboveTop = 0f
 
     private val wellLineColor = floatArrayOf(0.85f, 0.85f, 0.1f, 1f)
     // The falling piece is drawn as a wireframe only (no filled faces) so the grid and any locked
@@ -102,6 +103,7 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
         // fills the whole frame. This margin scales with the footprint so it stays proportional
         // for a wider/narrower well.
         val standoff = maxOf(width, depth) * 3f
+        standoffAboveTop = standoff
         val eyeZ = height + standoff
 
         Matrix.perspectiveM(projectionMatrix, 0, 55f, aspect, 0.5f, eyeZ + 5f)
@@ -139,7 +141,8 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
     private fun drawWellGrid() {
         val tube = engine.tube
-        val lines = Geometry.buildWellGridLines(tube.dimensions[0], tube.dimensions[1], tube.dimensions[2], wellLineColor)
+        val zRings = Geometry.perceptuallyEvenZRings(tube.dimensions[2], standoffAboveTop, rungCount = 6)
+        val lines = Geometry.buildWellGridLines(tube.dimensions[0], tube.dimensions[1], tube.dimensions[2], zRings, wellLineColor)
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.multiplyMM(tempMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, tempMatrix, 0)
