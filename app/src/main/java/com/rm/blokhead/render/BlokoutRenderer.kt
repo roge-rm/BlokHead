@@ -41,8 +41,11 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
     private val wellLineColor = floatArrayOf(0.85f, 0.85f, 0.1f, 1f)
     // The falling piece is drawn as a wireframe only (no filled faces) so the grid and any locked
-    // cubes beneath it stay fully visible through it, matching BlockOut II's reference look.
+    // cubes beneath it stay fully visible through it, matching BlockOut II's reference look. A
+    // faint shaded fill is layered under the wireframe so the piece still reads as a solid form,
+    // not just outlines, while staying mostly see-through.
     private val blockWireColor = floatArrayOf(1f, 1f, 1f, 1f)
+    private val blockFillColor = floatArrayOf(0.75f, 0.85f, 1f, 0.22f)
 
     // Compose controls run on the UI thread but GameEngine isn't synchronized, so input is
     // queued here and drained on the GL thread at the start of onDrawFrame, right before
@@ -163,7 +166,8 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
     private fun drawFallingBlock() {
         val block = engine.currentBlock
         val form = block.form
-        val vertices = ArrayList<Float>()
+        val fillVertices = ArrayList<Float>()
+        val wireVertices = ArrayList<Float>()
         for (z in 0 until form.dimensions[2]) for (y in 0 until form.dimensions[1]) for (x in 0 until form.dimensions[0]) {
             if (form.cubeAt(x, y, z) != 0) {
                 val local = floatArrayOf(
@@ -171,7 +175,8 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
                     y - form.centerPoint[1] - 0.5f,
                     z - form.centerPoint[2] - 0.5f,
                 )
-                Geometry.appendCubeWireframe(vertices, local, blockWireColor)
+                Geometry.appendCube(fillVertices, local, blockFillColor)
+                Geometry.appendCubeWireframe(wireVertices, local, blockWireColor)
             }
         }
 
@@ -199,7 +204,9 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
         Matrix.multiplyMM(tempMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, tempMatrix, 0)
-        drawLines(vertices.toFloatArray(), mvpMatrix)
+        // Faint fill first, then crisp wireframe edges on top of it.
+        drawTriangles(fillVertices.toFloatArray(), mvpMatrix)
+        drawLines(wireVertices.toFloatArray(), mvpMatrix)
     }
 
     private fun colorForLayer(z: Int): FloatArray {
