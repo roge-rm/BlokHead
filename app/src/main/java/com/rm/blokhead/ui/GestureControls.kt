@@ -24,11 +24,11 @@ private val MOVE_STEP = 32.dp
  *  since it's measured on a two-finger centroid, which drifts more than one fingertip, and needs
  *  a deliberately large motion per rotate so a two-finger gesture doesn't spin the piece many
  *  times over from an ordinary amount of hand movement. */
-private val ROTATE_PAN_STEP = 72.dp
+private val ROTATE_PAN_STEP = 56.dp
 
 /** Two-finger twist angle (in degrees) that fires a single Z rotate once a gesture has committed
  *  to twisting — likewise sized so a natural twist yields just a couple of steps, not a dozen. */
-private const val ROTATE_TWIST_STEP_DEGREES = 45f
+private const val ROTATE_TWIST_STEP_DEGREES = 35f
 
 /** How far a two-finger gesture's pan/twist has to travel before it *commits* to being a pan or
  *  a twist gesture for the rest of that gesture (whichever crosses its own threshold first) —
@@ -62,20 +62,29 @@ private fun fireSteps(accumulated: Float, stepSize: Float, onStep: (sign: Int) -
  * - Two-finger twist rotates Z — the "secondary" axis gets the "secondary" gesture, mirroring the
  *   existing button/gamepad hierarchy (X/Y on the primary reachable inputs, Z on a secondary one).
  * - A long-press (cancelled by any movement past touch slop, or by a second finger joining —
- *   exactly like a normal Android long-press) hard-drops. A plain tap does nothing here — pause
- *   lives outside the grid entirely, on the black border area a caller composes around this
- *   modifier's surface (see `GameScreen`), since a tap-to-pause on the grid itself would fight
- *   with move/long-press over the same touch.
+ *   exactly like a normal Android long-press) hard-drops. A plain tap toggles pause only if it
+ *   started in the black border area not covered by the rendered grid (per [isInPauseZone]) — a
+ *   tap on the grid content itself does nothing.
  *
- * Every callback here is one of `GameScreen`'s existing move/rotate/hard-drop lambdas — this
- * modifier only detects gestures and translates them into those same calls; the underlying
+ * This single modifier spans the *entire* touch surface (grid content plus any surrounding
+ * border) rather than being layered under a separate border-only tap element: Android/Compose
+ * hands an entire gesture to whichever element first hit-tested its initial touch-down, so a
+ * drag that happened to start a few pixels into the border would otherwise be swallowed by that
+ * separate element even once the finger moves well into the grid — [isInPauseZone] lets one
+ * shared surface still tell the two areas apart for tap purposes without that capture problem.
+ *
+ * Every other callback here is one of `GameScreen`'s existing move/rotate/hard-drop lambdas —
+ * this modifier only detects gestures and translates them into those same calls; the underlying
  * `GameEngine` already no-ops all of them while paused/game-over, so nothing here needs to check
- * that itself.
+ * that itself (except [onTogglePause], which decides on its own whether pausing still means
+ * anything).
  */
 fun Modifier.gestureControls(
     onMove: (axis: Int, sign: Int) -> Unit,
     onRotate: (axis: Int, sign: Int) -> Unit,
     onHardDrop: () -> Unit,
+    isInPauseZone: (position: Offset) -> Boolean = { false },
+    onTogglePause: () -> Unit = {},
 ): Modifier = pointerInput(Unit) {
     val moveStepPx = MOVE_STEP.toPx()
     val rotatePanStepPx = ROTATE_PAN_STEP.toPx()
@@ -159,7 +168,8 @@ fun Modifier.gestureControls(
             }
             val pressed = event.changes.filter { it.pressed }
             if (pressed.isEmpty()) {
-                // A plain tap on the grid — deliberately a no-op (see the doc comment above).
+                // A plain tap — only meaningful in the border area (see the doc comment above).
+                if (isInPauseZone(down.position)) onTogglePause()
                 return@awaitEachGesture
             }
             lastEventUptime = pressed.maxOf { it.uptimeMillis }

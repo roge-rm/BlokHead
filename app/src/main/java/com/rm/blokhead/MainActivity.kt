@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -512,6 +513,26 @@ private fun GameScreen(
                 }
             }
         } else {
+            // BlokoutRenderer's camera solves the vertical FOV so the well's near opening exactly
+            // fills the viewport width; since the well is square (width == depth), that makes the
+            // opening's projected height a fixed `aspect` fraction of the screen height, centered —
+            // i.e. the rendered grid occupies the vertical band [0.5 - aspect/2, 0.5 + aspect/2].
+            val containerHeight = maxHeight
+            val aspect = maxWidth.value / maxHeight.value
+            val gridBottomFraction = 0.5f + aspect / 2f
+            val gridTopHeight = containerHeight * (0.5f - aspect / 2f)
+
+            // In gesture mode the pause-tap zone (the border above/below the rendered grid) is
+            // handled by the same full-screen modifier as move/rotate/drop below, rather than a
+            // separate element layered on top of it — Android/Compose hands an entire gesture to
+            // whichever element first hit-tested its touch-down, so a drag starting a few pixels
+            // into the border (easy to do near the grid's edge) would otherwise be swallowed by a
+            // separate border-only tap catcher even once the finger moved well into the grid,
+            // making ordinary moves feel like they need a much bigger drag than they actually do.
+            val density = LocalDensity.current
+            val gridTopHeightPx = with(density) { gridTopHeight.toPx() }
+            val gridBottomYPx = with(density) { (containerHeight - gridTopHeight).toPx() }
+
             AndroidView(
                 modifier = Modifier
                     .fillMaxSize()
@@ -521,6 +542,8 @@ private fun GameScreen(
                                 onMove = onMove,
                                 onRotate = onRotateAction,
                                 onHardDrop = onHardDropAction,
+                                isInPauseZone = { pos -> pos.y < gridTopHeightPx || pos.y > gridBottomYPx },
+                                onTogglePause = onTogglePause,
                             )
                         } else {
                             base
@@ -531,18 +554,10 @@ private fun GameScreen(
 
             GameHud(snapshot = hud, modifier = Modifier.fillMaxWidth())
 
-            // BlokoutRenderer's camera solves the vertical FOV so the well's near opening exactly
-            // fills the viewport width; since the well is square (width == depth), that makes the
-            // opening's projected height a fixed `aspect` fraction of the screen height, centered —
-            // i.e. the rendered grid occupies the vertical band [0.5 - aspect/2, 0.5 + aspect/2].
-            val containerHeight = maxHeight
-            val aspect = maxWidth.value / maxHeight.value
-            val gridBottomFraction = 0.5f + aspect / 2f
-            val gridTopHeight = containerHeight * (0.5f - aspect / 2f)
-
             // Tapping anywhere above the grid (the HUD's band included) pauses/unpauses — placed
             // before the controls/overlays below so it never steals taps meant for them, and it's
             // a no-op once the game has ended (pausing a finished game doesn't mean anything).
+            // Button-mode only: gesture mode's pause-tap is handled above, inside gestureControls.
             if (!hud.isGameOver && !settings.gestureControlsEnabled) {
                 Spacer(
                     modifier = Modifier
@@ -551,26 +566,6 @@ private fun GameScreen(
                         .pointerInput(engine) {
                             detectTapGestures { onTogglePause() }
                         },
-                )
-            }
-
-            // Gesture mode: a tap on the grid itself does nothing (see gestureControls' own doc
-            // comment) — pause instead lives on the black border above/below the grid, the only
-            // margin portrait has (the rendered content already fills the full width).
-            if (settings.gestureControlsEnabled) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .fillMaxWidth()
-                        .height(gridTopHeight)
-                        .pointerInput(engine) { detectTapGestures { onTogglePause() } },
-                )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(gridTopHeight)
-                        .pointerInput(engine) { detectTapGestures { onTogglePause() } },
                 )
             }
 
