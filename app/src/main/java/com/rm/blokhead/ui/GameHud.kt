@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -35,7 +36,9 @@ data class HudSnapshot(
 
 /** Score/level/cubes readout pinned to the top of the screen, standing in for the original's
  *  scoreDisplay() sidebar (counter.c's odometer-style digit widgets are simplified to plain
- *  text here). */
+ *  text here). The colored surface itself runs all the way to the top edge, under the status
+ *  bar, so the bar doesn't cut a hard seam into it — only the text content is inset below the
+ *  status bar so it doesn't overlap the clock/battery icons. */
 @Composable
 fun GameHud(snapshot: HudSnapshot, modifier: Modifier = Modifier) {
     Surface(
@@ -46,6 +49,7 @@ fun GameHud(snapshot: HudSnapshot, modifier: Modifier = Modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .statusBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
