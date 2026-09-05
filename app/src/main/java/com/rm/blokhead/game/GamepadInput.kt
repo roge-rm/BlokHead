@@ -10,22 +10,18 @@ import com.rm.blokhead.data.GamepadBindings
 fun resolveGamepadAction(keyCode: Int, bindings: Map<GamepadAction, Int?>): GamepadAction? =
     bindings.entries.firstOrNull { it.value == keyCode }?.key
 
-/** True for the two buttons permanently reserved for menu Confirm/Back — never assignable to a
- *  gameplay action, regardless of remapping. */
-fun isReservedForMenus(keyCode: Int): Boolean =
-    keyCode == KeyEvent.KEYCODE_BUTTON_A || keyCode == KeyEvent.KEYCODE_BUTTON_B
-
 /**
  * Binds [action] to [keyCode], clearing it from whichever other action currently holds that
  * keycode (a keycode maps to at most one action at a time — otherwise [resolveGamepadAction]
  * would be ambiguous) and returning that bumped action, if any, so the UI can surface it.
  *
- * Rejects an attempt to bind a menu-reserved button: returns [bindings] unchanged and a null
- * bumped action, so a saved binding can never collide with Confirm/Back — enforced here, not
- * only in the UI, so it holds regardless of how many call sites ever trigger a rebind.
+ * A/B are ordinary bindable buttons like any other, including in the default bindings — menu
+ * Confirm/Back stay reachable through them regardless of what's bound, since `GameScreen` stops
+ * resolving gameplay actions altogether the moment its own Confirm/Back affordances (the paused
+ * overlay, the exit-confirm dialog) are on screen, no matter which button a player has since
+ * assigned to a rotation.
  */
 fun reassignBinding(bindings: GamepadBindings, action: GamepadAction, keyCode: Int): Pair<GamepadBindings, GamepadAction?> {
-    if (isReservedForMenus(keyCode)) return bindings to null
     val bumped = bindings.keyCodes.entries.firstOrNull { it.value == keyCode && it.key != action }?.key
     val updated = bindings.keyCodes.mapValues { (candidate, code) -> if (candidate == bumped) null else code } +
         (action to keyCode)

@@ -36,9 +36,10 @@ import com.rm.blokhead.game.keycodeDisplayName
 import com.rm.blokhead.game.reassignBinding
 import kotlinx.coroutines.delay
 
-/** Settings sub-screen letting the player see and rebind every gameplay gamepad action. Menu
- *  Confirm/Back (fixed to A/B) aren't listed here — they're never remappable, see
- *  [com.rm.blokhead.game.isReservedForMenus]. */
+/** Settings sub-screen letting the player see and rebind every gameplay gamepad action — A and B
+ *  included, like any other button (see [com.rm.blokhead.game.reassignBinding]). Menu Confirm/
+ *  Back stay reachable through whichever physical A/B buttons regardless, since gameplay actions
+ *  stop resolving at all while their own affordances are on screen. */
 @Composable
 fun GamepadBindingsScreen(
     gamepadRouter: GamepadInputRouter,
@@ -57,12 +58,8 @@ fun GamepadBindingsScreen(
         if (action != null) {
             gamepadRouter.captureHandler = { keyCode ->
                 val (updated, bumped) = reassignBinding(bindings, action, keyCode)
-                if (updated.keyCodes == bindings.keyCodes) {
-                    message = "A and B are reserved for menu navigation"
-                } else {
-                    onBindingsChange(updated)
-                    message = bumped?.let { "Reassigned from ${actionLabel(it)}" }
-                }
+                onBindingsChange(updated)
+                message = bumped?.let { "Reassigned from ${actionLabel(it)}" }
                 listeningAction = null
             }
         }

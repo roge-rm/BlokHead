@@ -6,7 +6,6 @@ import com.rm.blokhead.data.GamepadBindings
 import com.rm.blokhead.data.defaultGamepadBindings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GamepadInputTest {
@@ -26,14 +25,6 @@ class GamepadInputTest {
     @Test
     fun `resolveGamepadAction returns null for an empty map`() {
         assertNull(resolveGamepadAction(KeyEvent.KEYCODE_DPAD_UP, emptyMap()))
-    }
-
-    @Test
-    fun `isReservedForMenus is true only for A and B`() {
-        assertTrue(isReservedForMenus(KeyEvent.KEYCODE_BUTTON_A))
-        assertTrue(isReservedForMenus(KeyEvent.KEYCODE_BUTTON_B))
-        assertEquals(false, isReservedForMenus(KeyEvent.KEYCODE_BUTTON_X))
-        assertEquals(false, isReservedForMenus(KeyEvent.KEYCODE_DPAD_UP))
     }
 
     @Test
@@ -59,21 +50,20 @@ class GamepadInputTest {
     }
 
     @Test
-    fun `reassignBinding rejects a menu-reserved button`() {
+    fun `reassignBinding allows binding an action to A or B`() {
         val bindings = GamepadBindings(keyCodes = emptyMap())
         val (updated, bumped) = reassignBinding(bindings, GamepadAction.HardDrop, KeyEvent.KEYCODE_BUTTON_A)
-        assertEquals(bindings, updated)
+        assertEquals(KeyEvent.KEYCODE_BUTTON_A, updated.keyCodes[GamepadAction.HardDrop])
         assertNull(bumped)
     }
 
     @Test
-    fun `default bindings cover every action with no collisions and avoid A B`() {
+    fun `default bindings cover every action with no collisions`() {
         val defaults = defaultGamepadBindings()
         assertEquals(GamepadAction.entries.toSet(), defaults.keys)
 
         val boundCodes = defaults.values.filterNotNull()
         assertEquals("no two actions should default to the same button", boundCodes.size, boundCodes.toSet().size)
-        assertTrue(boundCodes.none { isReservedForMenus(it) })
     }
 
     @Test
