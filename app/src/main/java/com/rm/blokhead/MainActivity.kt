@@ -86,6 +86,12 @@ import kotlinx.coroutines.launch
  *  private constants of a different file's internal layout. */
 private val LANDSCAPE_CLUSTER_WIDTH = 156.dp
 
+/** Matches [GameControls]'s private `CELL` — a single button's width at 100% Button Scale. In
+ *  landscape, the control clusters sit right against the screen's physical left/right edges,
+ *  which on a real device can land right under a camera cutout or the gesture-nav area; insetting
+ *  by a full button width (on top of the existing small gap) keeps them clear of either. */
+private val LANDSCAPE_EDGE_INSET = 48.dp
+
 class MainActivity : ComponentActivity() {
     // Activity-level field (not `remember`-ed — a composable can't be reached from
     // dispatchKeyEvent) that every gamepad-aware composable installs/clears itself into as it
@@ -362,7 +368,8 @@ private fun GameScreen(
             // to the box's extra height. A square box (width == height == the full available
             // height) is what actually makes the rendered well as large as possible with zero
             // dead space top or bottom — landscape has width to spare for this, unlike portrait.
-            val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH * settings.buttonScale + 16.dp) * 2
+            val edgeInset = 8.dp + LANDSCAPE_EDGE_INSET * settings.buttonScale
+            val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH * settings.buttonScale + edgeInset + 8.dp) * 2
             val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
             // The grid claims the full container height on its own now — SCORE/LEVEL/CUBES no
@@ -385,14 +392,14 @@ private fun GameScreen(
 
             // Button Position only makes sense for portrait's below-the-grid stack; landscape
             // always centers both clusters vertically in the side margins instead.
-            val leftModifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 8.dp)
-            val rightModifier = Modifier.align(Alignment.CenterEnd).padding(horizontal = 8.dp)
+            val leftModifier = Modifier.align(Alignment.CenterStart).padding(horizontal = edgeInset)
+            val rightModifier = Modifier.align(Alignment.CenterEnd).padding(horizontal = edgeInset)
 
             Column(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .statusBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(horizontal = edgeInset, vertical = 8.dp),
             ) {
                 HudStat("SCORE", hud.score.toString())
             }
@@ -400,7 +407,7 @@ private fun GameScreen(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .statusBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(horizontal = edgeInset, vertical = 8.dp),
             ) {
                 HudStat("LEVEL", hud.level.toString())
                 HudStat("CUBES", hud.cubesDropped.toString(), modifier = Modifier.padding(top = 8.dp))
