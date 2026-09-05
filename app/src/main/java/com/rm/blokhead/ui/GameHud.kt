@@ -32,6 +32,7 @@ data class HudSnapshot(
     val level: Int,
     val cubesDropped: Int,
     val isGameOver: Boolean,
+    val isPaused: Boolean,
 )
 
 /** Score/level/cubes readout pinned to the top of the screen, standing in for the original's
@@ -57,6 +58,26 @@ fun GameHud(snapshot: HudSnapshot, modifier: Modifier = Modifier) {
             HudStat("LEVEL", snapshot.level.toString())
             HudStat("CUBES", snapshot.cubesDropped.toString())
         }
+    }
+}
+
+/** Shown while [GameEngine.isPaused] — dims the (still-visible-through-it) grid behind it and
+ *  labels the frozen state. Tapping the same top-of-screen zone that triggered the pause
+ *  unpauses; this overlay itself doesn't intercept taps, so that gesture keeps working while
+ *  it's shown. */
+@Composable
+fun PausedOverlay(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.75f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "PAUSED",
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
     }
 }
 

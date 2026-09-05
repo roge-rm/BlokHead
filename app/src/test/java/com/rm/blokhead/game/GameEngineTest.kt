@@ -61,4 +61,35 @@ class GameEngineTest {
         engine.update(1f)
         assertFalse(engine.isGameOver)
     }
+
+    @Test
+    fun `pausing freezes the block in place and ignores input`() {
+        val engine = GameEngine(forms = cubeOnly, width = 3, depth = 3, height = 10, random = Random(0))
+        engine.setPaused(true)
+        val frozenZ = engine.currentBlock.position[2]
+        val frozenX = engine.currentBlock.targetPosition[0]
+
+        engine.update(5f)
+        engine.moveRight()
+        engine.rotate(Axis.X, 1)
+        engine.hardDrop()
+
+        assertEquals(frozenZ, engine.currentBlock.position[2])
+        assertEquals(frozenX, engine.currentBlock.targetPosition[0])
+        assertEquals(0, engine.cubesDropped)
+    }
+
+    @Test
+    fun `unpausing lets the game continue`() {
+        val engine = GameEngine(forms = cubeOnly, width = 3, depth = 3, height = 10, random = Random(0))
+        engine.setPaused(true)
+        engine.setPaused(false)
+        engine.hardDrop()
+        var ticks = 0
+        while (engine.cubesDropped == 0 && ticks < 1000) {
+            engine.update(0.05f)
+            ticks++
+        }
+        assertEquals(1, engine.cubesDropped)
+    }
 }
