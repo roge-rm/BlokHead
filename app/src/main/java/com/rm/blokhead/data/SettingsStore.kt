@@ -17,7 +17,7 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings")
  *  menu, just a couple of hardcoded globals (solidBlocks, backgroundColor) set at compile time. */
 data class Settings(
     val diagonalButtonsEnabled: Boolean = false,
-    val startingDifficulty: Int = 2,
+    val startingDifficulty: Int = 1,
     /** 0f = controls sit right below the grid (default); 1f = pushed down near the bottom edge. */
     val buttonVerticalPosition: Float = 0f,
     val soundEnabled: Boolean = true,
@@ -27,7 +27,7 @@ data class Settings(
      *  wall-grid math (BlokoutRenderer.setUpCamera, Geometry.perceptuallyEvenZRings) assume it. */
     val wellSize: Int = 5,
     /** The well's vertical extent — how many layers tall it is before game over. */
-    val wellHeight: Int = 16,
+    val wellHeight: Int = 20,
     /** Opacity of the on-screen move/rotate/drop buttons (1f = fully opaque). */
     val buttonOpacity: Float = 1f,
 )
