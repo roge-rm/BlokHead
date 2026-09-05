@@ -11,6 +11,9 @@ import com.rm.blokhead.R
  * original had no audio at all; this is new, not a port of anything.
  */
 class SfxPlayer(context: Context) {
+    /** Gated by the Settings screen's sound toggle; set from the UI layer. */
+    var muted: Boolean = false
+
     private val soundPool = SoundPool.Builder()
         .setMaxStreams(4)
         .setAudioAttributes(
@@ -36,6 +39,7 @@ class SfxPlayer(context: Context) {
     fun playMenu() = play(menuId)
 
     private fun play(soundId: Int) {
+        if (muted) return
         soundPool.play(soundId, 1f, 1f, /* priority = */ 1, /* loop = */ 0, /* rate = */ 1f)
     }
 

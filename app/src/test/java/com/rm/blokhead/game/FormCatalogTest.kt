@@ -42,4 +42,18 @@ class FormCatalogTest {
             assertEquals(form.cubes.size, form.dimensions[0] * form.dimensions[1] * form.dimensions[2])
         }
     }
+
+    @Test
+    fun `flat and extended block sets partition all forms with no overlap`() {
+        assertTrue(FormCatalog.flatForms.all { it.dimensions[2] == 1 })
+        assertTrue(FormCatalog.extendedForms.all { it.dimensions[2] > 1 })
+        assertEquals(FormCatalog.allForms.size, FormCatalog.flatForms.size + FormCatalog.extendedForms.size)
+    }
+
+    @Test
+    fun `formsFor returns the matching set for each BlockSet`() {
+        assertEquals(FormCatalog.flatForms, FormCatalog.formsFor(BlockSet.FLAT))
+        assertEquals(FormCatalog.extendedForms, FormCatalog.formsFor(BlockSet.EXTENDED))
+        assertEquals(FormCatalog.allForms, FormCatalog.formsFor(BlockSet.ALL))
+    }
 }

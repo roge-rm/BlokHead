@@ -28,15 +28,18 @@ private val GAP = 6.dp
 
 /** Move/rotate/drop controls, standing in for the original's keyboard scheme in control.c:
  *  arrow keys -> move (X/Y), Q/A W/S D/E -> rotate (X/Y/Z, +/-), space -> hard drop. Two
- *  corner-anchored clusters (move d-pad left, rotate cluster right) rather than three separate
- *  groups with a dedicated drop button in the dead zone between them — hard drop instead lives
- *  in the d-pad's own previously-unused center cell, since it's the same thumb doing the moving
- *  and dropping. */
+ *  corner-anchored clusters (move d-pad left, rotate cluster right by default — swapped by
+ *  [leftHanded]) rather than three separate groups with a dedicated drop button in the dead zone
+ *  between them — hard drop instead lives in the d-pad's own center cell, since it's the same
+ *  thumb doing the moving and dropping. */
 @Composable
 fun GameControls(
     onMove: (axis: Int, sign: Int) -> Unit,
+    onDiagonalMove: (xSign: Int, ySign: Int) -> Unit,
     onRotate: (axis: Int, sign: Int) -> Unit,
     onHardDrop: () -> Unit,
+    diagonalEnabled: Boolean = false,
+    leftHanded: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -44,15 +47,33 @@ fun GameControls(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MoveDPad(onMove, onHardDrop)
-        RotateCluster(onRotate)
+        val dpad = @Composable { MoveDPad(diagonalEnabled, onMove, onDiagonalMove, onHardDrop) }
+        val rotate = @Composable { RotateCluster(onRotate) }
+        if (leftHanded) {
+            rotate()
+            dpad()
+        } else {
+            dpad()
+            rotate()
+        }
     }
 }
 
+/** Move d-pad, optionally with diagonal buttons filling the corners (blank when disabled, so
+ *  the up/down buttons stay in the exact same spot either way). */
 @Composable
-private fun MoveDPad(onMove: (axis: Int, sign: Int) -> Unit, onHardDrop: () -> Unit) {
+private fun MoveDPad(
+    diagonalEnabled: Boolean,
+    onMove: (axis: Int, sign: Int) -> Unit,
+    onDiagonalMove: (xSign: Int, ySign: Int) -> Unit,
+    onHardDrop: () -> Unit,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        RoundButton("▲") { onMove(Axis.Y, 1) }
+        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
+            if (diagonalEnabled) RoundButton("↖") { onDiagonalMove(-1, 1) } else BlankCell()
+            RoundButton("▲") { onMove(Axis.Y, 1) }
+            if (diagonalEnabled) RoundButton("↗") { onDiagonalMove(1, 1) } else BlankCell()
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
             RoundButton("◀") { onMove(Axis.X, -1) }
             RoundButton(
@@ -67,7 +88,11 @@ private fun MoveDPad(onMove: (axis: Int, sign: Int) -> Unit, onHardDrop: () -> U
             )
             RoundButton("▶") { onMove(Axis.X, 1) }
         }
-        RoundButton("▼") { onMove(Axis.Y, -1) }
+        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
+            if (diagonalEnabled) RoundButton("↙") { onDiagonalMove(-1, -1) } else BlankCell()
+            RoundButton("▼") { onMove(Axis.Y, -1) }
+            if (diagonalEnabled) RoundButton("↘") { onDiagonalMove(1, -1) } else BlankCell()
+        }
     }
 }
 

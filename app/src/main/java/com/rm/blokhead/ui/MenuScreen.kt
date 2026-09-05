@@ -16,7 +16,12 @@ import androidx.compose.ui.unit.dp
 
 /** The title screen, standing in for the original's initial menu.c state before startGame(). */
 @Composable
-fun MenuScreen(onStartGame: () -> Unit, onShowHighScores: () -> Unit, modifier: Modifier = Modifier) {
+fun MenuScreen(
+    onStartGame: () -> Unit,
+    onShowHighScores: () -> Unit,
+    onShowSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -45,6 +50,14 @@ fun MenuScreen(onStartGame: () -> Unit, onShowHighScores: () -> Unit, modifier: 
                 .padding(top = 12.dp),
         ) {
             Text("High Scores")
+        }
+        OutlinedButton(
+            onClick = onShowSettings,
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .padding(top = 12.dp),
+        ) {
+            Text("Settings")
         }
     }
 }
