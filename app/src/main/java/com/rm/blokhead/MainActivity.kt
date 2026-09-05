@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
@@ -150,6 +151,14 @@ private fun BlokHeadApp(gamepadRouter: GamepadInputRouter) {
         onDispose { if (screen != AppScreen.GAME) gamepadRouter.backHandler = null }
     }
 
+    // The system/hardware Back button and gesture reuse that exact same navigation — disabled at
+    // MENU (so Back there falls through to the platform default and actually exits the app) and
+    // at GAME (which registers its own BackHandler below instead, since Back means something
+    // different mid-playthrough than simple screen-to-screen navigation).
+    BackHandler(enabled = screen != AppScreen.MENU && screen != AppScreen.GAME) {
+        gamepadRouter.backHandler?.invoke()
+    }
+
     when (screen) {
         AppScreen.MENU -> MenuScreen(
             onStartGame = {
@@ -288,6 +297,22 @@ private fun GameScreen(
 
     var showExitConfirm by remember(sessionId) { mutableStateOf(false) }
 
+    // Shared by the system Back button/gesture and the gamepad's fixed "B" button alike, so both
+    // agree on what Back means mid-playthrough: pause first (giving the player a chance to see
+    // the board settle before committing to anything), then on a second press open the exit-
+    // confirm dialog rather than dropping them straight to the menu. Once the dialog itself is
+    // showing, further Back presses never reach here — Compose's AlertDialog owns its own back
+    // handling and dismisses itself (matching Cancel) before this callback would fire again. A
+    // finished game has nothing left to pause, so Back there just returns to the menu instead,
+    // same as tapping GameOverOverlay's own "Main Menu" button.
+    val handleBack: () -> Unit = {
+        when {
+            hud.isGameOver -> onExitToMenu()
+            hud.isPaused -> showExitConfirm = true
+            else -> surfaceView.enqueue { setPaused(true) }
+        }
+    }
+
     // Installs the gamepad gameplay handler for exactly as long as this session is playable —
     // reads showExitConfirm/hud/gamepadBindings live on every call (Compose state read by
     // reference, not captured by value), so it doesn't need to be reinstalled when any of those
@@ -317,12 +342,17 @@ private fun GameScreen(
             }
             action != null
         }
-        gamepadRouter.backHandler = { if (showExitConfirm) showExitConfirm = false }
+        gamepadRouter.backHandler = { if (showExitConfirm) showExitConfirm = false else handleBack() }
         onDispose {
             gamepadRouter.gameplayHandler = null
             gamepadRouter.backHandler = null
         }
     }
+
+    // The exit-confirm AlertDialog below dismisses itself on Back on its own (Compose's Dialog
+    // owns a back dispatcher of its own while shown, matching its Cancel button), so this only
+    // ever fires while that dialog isn't up — matching the gamepad backHandler just above.
+    BackHandler { if (showExitConfirm) showExitConfirm = false else handleBack() }
 
     // Shared by both orientation branches below, so the move/rotate/drop wiring exists exactly
     // once regardless of which layout is currently shown.
