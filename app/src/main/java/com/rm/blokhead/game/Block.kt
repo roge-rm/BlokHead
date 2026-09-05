@@ -37,6 +37,13 @@ class Block(val form: Form, fallSpeed: Float = 0.1f) {
     var stopHeight = 0f
 
     var fallSpeed = fallSpeed
+
+    // Set by GameEngine.hardDrop(). fallSpeed itself is doubled from the original for a visibly
+    // faster physical fall, but the locking score formula (proportional to fallSpeed at the
+    // moment of lock) would otherwise double the hard-drop score bonus along with it — this lets
+    // GameEngine halve that specific contribution back to its original value without touching
+    // normal (non-hard-dropped) scoring at all.
+    var wasHardDropped = false
     // Doubled from the original's 2f/3f (a 0.5s slide / 0.333s turn) — the animation duration a
     // tap/gamepad press waits on, not a legality gate (Collision's checks act on
     // targetPosition/targetOrientation immediately, before the slide/turn visually catches up).
