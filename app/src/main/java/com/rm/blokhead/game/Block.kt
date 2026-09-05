@@ -37,8 +37,13 @@ class Block(val form: Form, fallSpeed: Float = 0.1f) {
     var stopHeight = 0f
 
     var fallSpeed = fallSpeed
-    var moveSpeed = 2f
-    var turnSpeed = 3f
+    // Doubled from the original's 2f/3f (a 0.5s slide / 0.333s turn) — the animation duration a
+    // tap/gamepad press waits on, not a legality gate (Collision's checks act on
+    // targetPosition/targetOrientation immediately, before the slide/turn visually catches up).
+    // With no auto-repeat on the touch buttons, this was the main thing making single presses
+    // feel sluggish.
+    var moveSpeed = 4f
+    var turnSpeed = 6f
 
     init {
         targetPosition[0] = form.centerPoint[0]
