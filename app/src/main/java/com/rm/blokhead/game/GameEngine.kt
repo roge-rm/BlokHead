@@ -75,10 +75,14 @@ class GameEngine(
      *  doesn't interrupt the pace of play. */
     private val clearFlashDuration = 0.1f
 
-    /** How long a piece rests on the stack (able to still slide/rotate) before it locks in place
-     *  — a grace period, not tied to fallSpeed/level in any way. Halved twice now from the
-     *  original's 1f (1f -> 0.5f -> 0.25f) chasing a snappier feel; still not level-scaled. */
-    private val lockDelay = 0.25f
+    /** How long a piece rests on the stack (still able to slide/rotate) before it locks in place
+     *  — a grace period, not tied to fallSpeed/level in any way. A hard-dropped piece was
+     *  deliberately committed to that spot, so there's no real chance (or reason) to reposition
+     *  it — that case keeps the short delay chased down from the original 1f (1f -> 0.5f ->
+     *  0.25f). A naturally-fallen piece still benefits from a moment to slide/rotate into place,
+     *  so it keeps a longer delay instead. */
+    private val hardDropLockDelay = 0.25f
+    private val naturalLockDelay = 0.75f
 
     private fun levelFactorFor(level: Int): Float = if (level < 5) level / 5f else level - 5f
 
@@ -107,6 +111,7 @@ class GameEngine(
         elapsedSinceSpawn += deltaSeconds
         currentBlock.update(elapsedSinceSpawn)
         Collision.tryLowerBlock(tube, currentBlock, elapsedSinceSpawn)
+        val lockDelay = if (currentBlock.wasHardDropped) hardDropLockDelay else naturalLockDelay
         if (elapsedSinceSpawn - currentBlock.lastFall > lockDelay) {
             lockCurrentBlockAndAdvance()
         }
