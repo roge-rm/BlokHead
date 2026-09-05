@@ -57,9 +57,11 @@ private fun MoveDPad(onMove: (axis: Int, sign: Int) -> Unit, onHardDrop: () -> U
             RoundButton("◀") { onMove(Axis.X, -1) }
             RoundButton(
                 "⏬",
+                // Faded relative to the other buttons — it's still a different color so it
+                // reads as a distinct kind of action, just not shouting over move/rotate.
                 colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f),
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f),
                 ),
                 onClick = onHardDrop,
             )

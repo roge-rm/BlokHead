@@ -39,6 +39,8 @@ class GameEngine(
         private set
     var isGameOver: Boolean = false
         private set
+    var isPaused: Boolean = false
+        private set
 
     private var levelFactor: Float = levelFactorFor(startLevel)
     private var elapsedSinceSpawn: Float = 0f
@@ -58,9 +60,16 @@ class GameEngine(
         elapsedSinceSpawn = 0f
     }
 
+    /** Freezes/resumes the game in place: [update] becomes a no-op and every input method below
+     *  is ignored until unpaused, without touching any game state (the piece resumes exactly
+     *  where it left off). */
+    fun setPaused(paused: Boolean) {
+        isPaused = paused
+    }
+
     /** Advances the game by [deltaSeconds]. Call this from the render/game loop each frame. */
     fun update(deltaSeconds: Float) {
-        if (isGameOver) return
+        if (isGameOver || isPaused) return
         elapsedSinceSpawn += deltaSeconds
         currentBlock.update(elapsedSinceSpawn)
         Collision.tryLowerBlock(tube, currentBlock, elapsedSinceSpawn)
@@ -75,18 +84,18 @@ class GameEngine(
     fun moveBackward() = tryMove(Axis.Y, -1)
 
     fun rotate(axis: Int, sign: Int) {
-        if (isGameOver) return
+        if (isGameOver || isPaused) return
         Collision.tryTurnBlock(tube, currentBlock, axis, sign, elapsedSinceSpawn)
     }
 
     private fun tryMove(axis: Int, sign: Int) {
-        if (isGameOver) return
+        if (isGameOver || isPaused) return
         Collision.tryMoveBlock(tube, currentBlock, axis, sign, elapsedSinceSpawn)
     }
 
     /** Instantly speeds up the fall, ported from the space-bar handler in control.c. */
     fun hardDrop() {
-        if (isGameOver) return
+        if (isGameOver || isPaused) return
         currentBlock.lastStop = elapsedSinceSpawn
         currentBlock.stopHeight = currentBlock.position[2]
         currentBlock.fallSpeed = tube.dimensions[2] / 2f
@@ -101,6 +110,7 @@ class GameEngine(
         levelsDescended = 0
         levelFactor = levelFactorFor(startLevel)
         isGameOver = false
+        isPaused = false
         spawnBlock()
     }
 
