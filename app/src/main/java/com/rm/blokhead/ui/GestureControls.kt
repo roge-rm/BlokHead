@@ -15,9 +15,21 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** One-finger drag distance (in dp) that fires a single move — roughly 2/3 of a control button's
- *  width, so a deliberate drag reads as one distinct step rather than needing a huge swipe. */
-private val MOVE_STEP = 32.dp
+/** One-finger drag distance (in dp) that fires a single move — small and deliberately close to
+ *  the system touch slop, so the piece starts sliding almost the instant a drag begins rather
+ *  than needing to "wind up" a large swipe first; a fast drag then just crosses many of these in
+ *  quick succession (capped to [MOVE_STEPS_PER_EVENT] per processed touch event — see its doc
+ *  comment) rather than needing a bigger step size to feel responsive. */
+private val MOVE_STEP = 16.dp
+
+/** Caps how many move steps a single processed touch event can fire at once. Android can batch
+ *  several real motion samples into one delivered event under load (or just from a fast flick),
+ *  which would otherwise cross several [MOVE_STEP] widths in one jump — instantly queuing up a
+ *  pile of moves that then visibly slide through multiple cells one after another once the finger
+ *  has already stopped. Capping to one per event spreads that same total drag distance across
+ *  the next few events instead (arriving within milliseconds of each other during a real drag),
+ *  so the piece never appears to move more than one cell for what reads as a single motion. */
+private const val MOVE_STEPS_PER_EVENT = 1
 
 /** Two-finger pan distance (in dp) that fires a single X/Y rotate once a gesture has committed to
  *  panning (see [ROTATE_PAN_COMMIT]/[ROTATE_TWIST_COMMIT_DEGREES]) — bigger than [MOVE_STEP]
@@ -46,10 +58,19 @@ private fun centroidAndAngleDegrees(a: Offset, b: Offset): Pair<Offset, Float> {
     return centroid to angle
 }
 
-private fun fireSteps(accumulated: Float, stepSize: Float, onStep: (sign: Int) -> Unit): Float {
-    val (steps, remainder) = stepsFromAccumulated(accumulated, stepSize)
-    repeat(abs(steps)) { onStep(if (steps > 0) 1 else -1) }
-    return remainder
+private fun fireSteps(
+    accumulated: Float,
+    stepSize: Float,
+    maxSteps: Int = Int.MAX_VALUE,
+    onStep: (sign: Int) -> Unit,
+): Float {
+    val (steps, _) = stepsFromAccumulated(accumulated, stepSize)
+    val fired = steps.coerceIn(-maxSteps, maxSteps)
+    repeat(abs(fired)) { onStep(if (fired > 0) 1 else -1) }
+    // Unlike the uncapped case, the remainder here is measured against what was actually fired,
+    // not every step that was crossed — so anything past maxSteps stays queued to fire on the
+    // very next event instead of being silently dropped.
+    return accumulated - fired * stepSize
 }
 
 /**
@@ -201,8 +222,8 @@ fun Modifier.gestureControls(
             change.consume()
             moveAccumX += delta.x
             moveAccumY += delta.y
-            moveAccumX = fireSteps(moveAccumX, moveStepPx) { sign -> onMove(Axis.X, sign) }
-            moveAccumY = fireSteps(moveAccumY, moveStepPx) { sign -> onMove(Axis.Y, -sign) }
+            moveAccumX = fireSteps(moveAccumX, moveStepPx, MOVE_STEPS_PER_EVENT) { sign -> onMove(Axis.X, sign) }
+            moveAccumY = fireSteps(moveAccumY, moveStepPx, MOVE_STEPS_PER_EVENT) { sign -> onMove(Axis.Y, -sign) }
         }
     }
 }
