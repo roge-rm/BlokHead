@@ -146,6 +146,7 @@ private fun GameScreen(
             startLevel = settings.startingDifficulty,
             width = settings.wellSize,
             depth = settings.wellSize,
+            height = settings.wellHeight,
         )
     }
     val surfaceView = remember(sessionId) { BlokoutSurfaceView(context, engine) }

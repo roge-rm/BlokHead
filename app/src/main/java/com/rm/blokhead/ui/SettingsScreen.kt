@@ -76,6 +76,12 @@ fun SettingsScreen(settings: Settings, onSettingsChange: (Settings) -> Unit, onB
             valueLabel = { "${it}×$it" },
             onValueChange = { onSettingsChange(settings.copy(wellSize = it)) },
         )
+        IntSliderRow(
+            title = "Well Height",
+            value = settings.wellHeight,
+            range = 10..24,
+            onValueChange = { onSettingsChange(settings.copy(wellHeight = it)) },
+        )
 
         SectionLabel("Button Position")
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
