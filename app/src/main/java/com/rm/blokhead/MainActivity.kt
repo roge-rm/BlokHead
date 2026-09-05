@@ -246,6 +246,7 @@ private fun GameScreen(
                 onHardDrop = { surfaceView.enqueue { hardDrop() } },
                 diagonalEnabled = settings.diagonalButtonsEnabled,
                 leftHanded = settings.leftHandedMode,
+                opacity = settings.buttonOpacity,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp),
