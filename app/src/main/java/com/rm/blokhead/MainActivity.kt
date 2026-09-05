@@ -1,6 +1,7 @@
 package com.rm.blokhead
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -37,6 +38,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.rm.blokhead.audio.SfxPlayer
+import com.rm.blokhead.data.GamepadBindings
+import com.rm.blokhead.data.GamepadBindingsStore
 import com.rm.blokhead.data.HighScoreEntry
 import com.rm.blokhead.data.HighScoreStore
 import com.rm.blokhead.data.Settings
@@ -44,42 +47,56 @@ import com.rm.blokhead.data.SettingsStore
 import com.rm.blokhead.game.Axis
 import com.rm.blokhead.game.FormCatalog
 import com.rm.blokhead.game.GameEngine
+import com.rm.blokhead.game.resolveGamepadAction
+import com.rm.blokhead.data.GamepadAction
 import com.rm.blokhead.render.BlokoutSurfaceView
 import com.rm.blokhead.ui.AppScreen
 import com.rm.blokhead.ui.GameControls
 import com.rm.blokhead.ui.GameHud
 import com.rm.blokhead.ui.GameOverOverlay
+import com.rm.blokhead.ui.GamepadBindingsScreen
 import com.rm.blokhead.ui.HighScoreScreen
 import com.rm.blokhead.ui.HudSnapshot
 import com.rm.blokhead.ui.MenuScreen
 import com.rm.blokhead.ui.NameEntryOverlay
 import com.rm.blokhead.ui.PausedOverlay
 import com.rm.blokhead.ui.SettingsScreen
+import com.rm.blokhead.ui.gamepadFocusable
 import com.rm.blokhead.ui.theme.BlokHeadTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    // Activity-level field (not `remember`-ed — a composable can't be reached from
+    // dispatchKeyEvent) that every gamepad-aware composable installs/clears itself into as it
+    // enters/leaves composition. See GamepadInputRouter's doc.
+    private val gamepadRouter = GamepadInputRouter()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             BlokHeadTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    BlokHeadApp()
+                    BlokHeadApp(gamepadRouter)
                 }
             }
         }
     }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+        gamepadRouter.handle(event) ?: super.dispatchKeyEvent(event)
 }
 
 @Composable
-private fun BlokHeadApp() {
+private fun BlokHeadApp(gamepadRouter: GamepadInputRouter) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val highScoreStore = remember { HighScoreStore(context.applicationContext) }
     val settingsStore = remember { SettingsStore(context.applicationContext) }
     val settings by settingsStore.settings.collectAsState(initial = Settings())
+    val gamepadBindingsStore = remember { GamepadBindingsStore(context.applicationContext) }
+    val gamepadBindings by gamepadBindingsStore.bindings.collectAsState(initial = GamepadBindings())
     val sfx = remember { SfxPlayer(context.applicationContext) }
     DisposableEffect(sfx) { onDispose { sfx.release() } }
     LaunchedEffect(settings.soundEnabled) { sfx.muted = !settings.soundEnabled }
@@ -88,6 +105,22 @@ private fun BlokHeadApp() {
     // Bumped each "Start Game", so GameScreen's remember(sessionId) below starts a fresh
     // GameEngine/GLSurfaceView per playthrough instead of reusing one across menu visits.
     var gameSessionId by remember { mutableIntStateOf(0) }
+
+    // The fixed "B" button always means Back, wherever that leads for the screen currently
+    // shown — except AppScreen.GAME, which owns its own backHandler for the exit-confirm dialog
+    // (see GameScreen's DisposableEffect) since Back means something different while playing.
+    DisposableEffect(screen) {
+        if (screen != AppScreen.GAME) {
+            gamepadRouter.backHandler = when (screen) {
+                AppScreen.MENU -> null
+                AppScreen.HIGH_SCORES -> { { sfx.playMenu(); screen = AppScreen.MENU } }
+                AppScreen.SETTINGS -> { { sfx.playMenu(); screen = AppScreen.MENU } }
+                AppScreen.CONTROLLER -> { { sfx.playMenu(); screen = AppScreen.SETTINGS } }
+                AppScreen.GAME -> null
+            }
+        }
+        onDispose { if (screen != AppScreen.GAME) gamepadRouter.backHandler = null }
+    }
 
     when (screen) {
         AppScreen.MENU -> MenuScreen(
@@ -109,6 +142,8 @@ private fun BlokHeadApp() {
         AppScreen.GAME -> GameScreen(
             sessionId = gameSessionId,
             settings = settings,
+            gamepadBindings = gamepadBindings,
+            gamepadRouter = gamepadRouter,
             highScoreStore = highScoreStore,
             sfx = sfx,
             onExitToMenu = { screen = AppScreen.MENU },
@@ -124,6 +159,14 @@ private fun BlokHeadApp() {
             settings = settings,
             onSettingsChange = { updated -> coroutineScope.launch { settingsStore.save(updated) } },
             onBack = { sfx.playMenu(); screen = AppScreen.MENU },
+            onShowGamepadBindings = { sfx.playMenu(); screen = AppScreen.CONTROLLER },
+        )
+
+        AppScreen.CONTROLLER -> GamepadBindingsScreen(
+            gamepadRouter = gamepadRouter,
+            bindings = gamepadBindings,
+            onBindingsChange = { updated -> coroutineScope.launch { gamepadBindingsStore.save(updated) } },
+            onBack = { sfx.playMenu(); screen = AppScreen.SETTINGS },
         )
     }
 }
@@ -132,6 +175,8 @@ private fun BlokHeadApp() {
 private fun GameScreen(
     sessionId: Int,
     settings: Settings,
+    gamepadBindings: GamepadBindings,
+    gamepadRouter: GamepadInputRouter,
     highScoreStore: HighScoreStore,
     sfx: SfxPlayer,
     onExitToMenu: () -> Unit,
@@ -185,6 +230,44 @@ private fun GameScreen(
     LaunchedEffect(hud.isGameOver) {
         if (hud.isGameOver && highScoreQualified == null) {
             highScoreQualified = highScoreStore.isHighScore(hud.score)
+        }
+    }
+
+    var showExitConfirm by remember(sessionId) { mutableStateOf(false) }
+
+    // Installs the gamepad gameplay handler for exactly as long as this session is playable —
+    // reads showExitConfirm/hud/gamepadBindings live on every call (Compose state read by
+    // reference, not captured by value), so it doesn't need to be reinstalled when any of those
+    // change. While a dialog/overlay is covering the game, it defers entirely to Back/Compose's
+    // own key handling instead of acting on the piece underneath.
+    DisposableEffect(sessionId) {
+        gamepadRouter.gameplayHandler = { event ->
+            val action = if (showExitConfirm || hud.isGameOver) {
+                null
+            } else {
+                resolveGamepadAction(event.keyCode, gamepadBindings.keyCodes)
+            }
+            when (action) {
+                GamepadAction.MoveLeft -> { sfx.playMove(); surfaceView.enqueue { moveLeft() } }
+                GamepadAction.MoveRight -> { sfx.playMove(); surfaceView.enqueue { moveRight() } }
+                GamepadAction.MoveForward -> { sfx.playMove(); surfaceView.enqueue { moveForward() } }
+                GamepadAction.MoveBackward -> { sfx.playMove(); surfaceView.enqueue { moveBackward() } }
+                GamepadAction.RotateXPositive -> { sfx.playRotate(); surfaceView.enqueue { rotate(Axis.X, 1) } }
+                GamepadAction.RotateXNegative -> { sfx.playRotate(); surfaceView.enqueue { rotate(Axis.X, -1) } }
+                GamepadAction.RotateYPositive -> { sfx.playRotate(); surfaceView.enqueue { rotate(Axis.Y, 1) } }
+                GamepadAction.RotateYNegative -> { sfx.playRotate(); surfaceView.enqueue { rotate(Axis.Y, -1) } }
+                GamepadAction.RotateZPositive -> { sfx.playRotate(); surfaceView.enqueue { rotate(Axis.Z, 1) } }
+                GamepadAction.RotateZNegative -> { sfx.playRotate(); surfaceView.enqueue { rotate(Axis.Z, -1) } }
+                GamepadAction.HardDrop -> surfaceView.enqueue { hardDrop() }
+                GamepadAction.Pause -> surfaceView.enqueue { setPaused(!isPaused) }
+                null -> {}
+            }
+            action != null
+        }
+        gamepadRouter.backHandler = { if (showExitConfirm) showExitConfirm = false }
+        onDispose {
+            gamepadRouter.gameplayHandler = null
+            gamepadRouter.backHandler = null
         }
     }
 
@@ -257,7 +340,6 @@ private fun GameScreen(
             )
         }
 
-        var showExitConfirm by remember(sessionId) { mutableStateOf(false) }
         AnimatedVisibility(
             visible = hud.isPaused && !hud.isGameOver,
             enter = fadeIn(animationSpec = tween(150)),
@@ -272,16 +354,18 @@ private fun GameScreen(
                 title = { Text("Quit to Menu?") },
                 text = { Text("Your current game will be lost.") },
                 confirmButton = {
-                    TextButton(onClick = {
+                    val quit = {
                         showExitConfirm = false
                         sfx.playMenu()
                         onExitToMenu()
-                    }) {
+                    }
+                    TextButton(onClick = quit, modifier = Modifier.gamepadFocusable(onActivate = quit)) {
                         Text("Quit")
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showExitConfirm = false }) {
+                    val cancel = { showExitConfirm = false }
+                    TextButton(onClick = cancel, modifier = Modifier.gamepadFocusable(onActivate = cancel)) {
                         Text("Cancel")
                     }
                 },

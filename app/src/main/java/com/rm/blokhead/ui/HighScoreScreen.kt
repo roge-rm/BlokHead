@@ -17,8 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.rm.blokhead.data.HighScoreEntry
 
@@ -27,6 +31,9 @@ import com.rm.blokhead.data.HighScoreEntry
  *  reading from [com.rm.blokhead.data.HighScoreStore]. */
 @Composable
 fun HighScoreScreen(entries: List<HighScoreEntry>, onBack: () -> Unit, modifier: Modifier = Modifier) {
+    val backFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { backFocus.requestFocus() }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -62,7 +69,9 @@ fun HighScoreScreen(entries: List<HighScoreEntry>, onBack: () -> Unit, modifier:
             onClick = onBack,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .padding(24.dp),
+                .padding(24.dp)
+                .focusRequester(backFocus)
+                .gamepadFocusable(onActivate = onBack),
         ) {
             Text("Back")
         }
