@@ -101,21 +101,18 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
         }
     }
 
-    /** The well's true accessible top: [Tube.dimensions]'s Z extent is the well's configured
-     *  height plus one layer of invisible headroom (see [Tube]'s own doc) — the camera, rendered
-     *  walls, and a freshly spawned piece all target this boundary instead, so what's drawn as
-     *  "the well" is exactly where a piece can actually be. */
-    private fun accessibleTop(tube: Tube): Float = (tube.dimensions[2] - 1).toFloat()
+    /** The top boundary the camera and wall geometry render up to. A freshly spawned piece's
+     *  near (camera-facing) face sits exactly here (see [drawFallingBlock]'s doc for why that's
+     *  `tube.dimensions[2]`, one further out than [Tube.dimensions]'s own array capacity) — so
+     *  what's drawn as "the top of the well" is exactly as far as a piece's outer surface ever
+     *  reaches, not a plane it immediately poke through. */
+    private fun wellTop(tube: Tube): Float = tube.dimensions[2].toFloat() + 1f
 
     private fun setUpCamera() {
         val tube = engine.tube
         val width = tube.dimensions[0].toFloat()
         val depth = tube.dimensions[1].toFloat()
-        // tube.dimensions[2] is the array's full capacity (well height + 1 layer of invisible
-        // headroom, see Tube's own doc) — the camera and rendered walls target the *accessible*
-        // top just below that headroom layer, so what's drawn as "the well" is exactly where a
-        // piece can actually be, and a freshly spawned piece lines up flush with it.
-        val height = accessibleTop(tube)
+        val height = wellTop(tube)
         val aspect = viewportWidth.toFloat() / viewportHeight.toFloat()
         // Distance from the eye to the well's top opening. Closer means a freshly spawned piece
         // starts as a larger part of the view (and the near opening's angular size is bigger for
@@ -169,7 +166,7 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
     private fun drawWellGrid() {
         val tube = engine.tube
-        val height = accessibleTop(tube)
+        val height = wellTop(tube)
         // More rings for a taller well: perceptuallyEvenZRings deliberately spaces however many
         // rings it's given evenly *on screen*, which otherwise makes a well look identical
         // regardless of its actual depth — a taller well needs visibly more of them (a denser
@@ -224,15 +221,19 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
         // continuous position (matching the original's per-frame model matrix in gameDisplay()).
         // block.position[2] follows the original's convention of 0 = the well's top opening,
         // falling towards negative values; the locked-cube grid here instead runs 0 = bottom
-        // upward (matching Tube's array layout), so the Z position is re-based by the well's
-        // accessible top (see accessibleTop()) to land in that same space, flush with the
-        // rendered wall geometry rather than one invisible headroom layer beyond it.
+        // upward (matching Tube's array layout), so the Z position is re-based by tube.dimensions[2]
+        // to land in that same space — this must stay tube.dimensions[2] exactly (not wellTop(),
+        // which is one further out) to match Tube.placeBlock's own `floor(position[2]+0.5) +
+        // dimensions[2]` locking formula continuously; using anything else here would make the
+        // piece visibly jump the moment it locks. wellTop() draws the wall boundary one unit
+        // beyond dimensions[2] instead, so a spawned piece's outer (near) face sits flush with
+        // it rather than poking through a boundary drawn at its own far face.
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.translateM(
             modelMatrix, 0,
             block.position[0] + 0.5f,
             block.position[1] + 0.5f,
-            block.position[2] + accessibleTop(engine.tube) + 0.5f,
+            block.position[2] + engine.tube.dimensions[2] + 0.5f,
         )
         val rotation = floatArrayOf(
             block.orientation[0][0], block.orientation[0][1], block.orientation[0][2], 0f,
