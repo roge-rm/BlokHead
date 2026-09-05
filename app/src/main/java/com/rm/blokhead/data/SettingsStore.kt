@@ -30,6 +30,8 @@ data class Settings(
     val wellHeight: Int = 20,
     /** Opacity of the on-screen move/rotate/drop buttons (1f = fully opaque). */
     val buttonOpacity: Float = 1f,
+    /** Size of the on-screen move/rotate/drop buttons, relative to their default (1f = 100%). */
+    val buttonScale: Float = 1f,
 )
 
 private object Keys {
@@ -42,6 +44,7 @@ private object Keys {
     val WELL_SIZE = intPreferencesKey("well_size")
     val WELL_HEIGHT = intPreferencesKey("well_height")
     val BUTTON_OPACITY = floatPreferencesKey("button_opacity")
+    val BUTTON_SCALE = floatPreferencesKey("button_scale")
 }
 
 /** DataStore-backed persistence for [Settings]. */
@@ -60,6 +63,7 @@ class SettingsStore(private val context: Context) {
             wellSize = prefs[Keys.WELL_SIZE] ?: defaults.wellSize,
             wellHeight = prefs[Keys.WELL_HEIGHT] ?: defaults.wellHeight,
             buttonOpacity = prefs[Keys.BUTTON_OPACITY] ?: defaults.buttonOpacity,
+            buttonScale = prefs[Keys.BUTTON_SCALE] ?: defaults.buttonScale,
         )
     }
 
@@ -74,6 +78,7 @@ class SettingsStore(private val context: Context) {
             prefs[Keys.WELL_SIZE] = settings.wellSize
             prefs[Keys.WELL_HEIGHT] = settings.wellHeight
             prefs[Keys.BUTTON_OPACITY] = settings.buttonOpacity
+            prefs[Keys.BUTTON_SCALE] = settings.buttonScale
         }
     }
 }

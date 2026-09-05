@@ -85,7 +85,7 @@ fun GamepadBindingsScreen(
             .padding(12.dp),
     ) {
         Text(
-            text = "Controller",
+            text = "Map Controls",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 4.dp),

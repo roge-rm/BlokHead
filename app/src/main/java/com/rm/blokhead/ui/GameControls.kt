@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -20,10 +20,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rm.blokhead.game.Axis
 
-/** Every round control button is this size; [GAP] is the breathing room between adjacent cells
- *  in a row, real or blank, so a row of e.g. two buttons never has them touching. Both
- *  [MoveDPad] and [RotateCluster] build their rows from these same two constants so the two
- *  clusters are true mirrors of each other. */
+/** Every round control button is this size at the default 100% [Settings.buttonScale]; [GAP] is
+ *  the breathing room between adjacent cells in a row, real or blank, so a row of e.g. two
+ *  buttons never has them touching. Both [MoveDPad] and [RotateCluster] build their rows from
+ *  these same two constants (scaled by their own `scale` parameter) so the two clusters stay
+ *  true mirrors of each other at any size. */
 private val CELL = 48.dp
 private val GAP = 6.dp
 
@@ -42,6 +43,7 @@ fun GameControls(
     diagonalEnabled: Boolean = false,
     leftHanded: Boolean = false,
     opacity: Float = 1f,
+    scale: Float = 1f,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -49,8 +51,8 @@ fun GameControls(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val dpad = @Composable { MoveDPad(diagonalEnabled, onMove, onDiagonalMove, onHardDrop) }
-        val rotate = @Composable { RotateCluster(onRotate) }
+        val dpad = @Composable { MoveDPad(diagonalEnabled, onMove, onDiagonalMove, onHardDrop, scale = scale) }
+        val rotate = @Composable { RotateCluster(onRotate, scale = scale) }
         if (leftHanded) {
             rotate()
             dpad()
@@ -72,17 +74,25 @@ fun MoveDPad(
     onDiagonalMove: (xSign: Int, ySign: Int) -> Unit,
     onHardDrop: () -> Unit,
     modifier: Modifier = Modifier,
+    scale: Float = 1f,
 ) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-            if (diagonalEnabled) RoundButton("↖") { onDiagonalMove(-1, 1) } else BlankCell()
-            RoundButton("▲") { onMove(Axis.Y, 1) }
-            if (diagonalEnabled) RoundButton("↗") { onDiagonalMove(1, 1) } else BlankCell()
+    val cell = CELL * scale
+    val gap = GAP * scale
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(gap),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            if (diagonalEnabled) RoundButton("↖", size = cell) { onDiagonalMove(-1, 1) } else BlankCell(cell)
+            RoundButton("▲", size = cell) { onMove(Axis.Y, 1) }
+            if (diagonalEnabled) RoundButton("↗", size = cell) { onDiagonalMove(1, 1) } else BlankCell(cell)
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-            RoundButton("◀") { onMove(Axis.X, -1) }
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            RoundButton("◀", size = cell) { onMove(Axis.X, -1) }
             RoundButton(
                 "⏬",
+                size = cell,
                 // Faded relative to the other buttons — it's still a different color so it
                 // reads as a distinct kind of action, just not shouting over move/rotate.
                 colors = ButtonDefaults.filledTonalButtonColors(
@@ -91,12 +101,12 @@ fun MoveDPad(
                 ),
                 onClick = onHardDrop,
             )
-            RoundButton("▶") { onMove(Axis.X, 1) }
+            RoundButton("▶", size = cell) { onMove(Axis.X, 1) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-            if (diagonalEnabled) RoundButton("↙") { onDiagonalMove(-1, -1) } else BlankCell()
-            RoundButton("▼") { onMove(Axis.Y, -1) }
-            if (diagonalEnabled) RoundButton("↘") { onDiagonalMove(1, -1) } else BlankCell()
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            if (diagonalEnabled) RoundButton("↙", size = cell) { onDiagonalMove(-1, -1) } else BlankCell(cell)
+            RoundButton("▼", size = cell) { onMove(Axis.Y, -1) }
+            if (diagonalEnabled) RoundButton("↘", size = cell) { onDiagonalMove(1, -1) } else BlankCell(cell)
         }
     }
 }
@@ -114,22 +124,32 @@ fun MoveDPad(
  *
  *  Public for the same reason as [MoveDPad] — reused standalone in the landscape layout. */
 @Composable
-fun RotateCluster(onRotate: (axis: Int, sign: Int) -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-            BlankCell()
-            RoundButton("X+") { onRotate(Axis.X, 1) }
-            RoundButton("Z+") { onRotate(Axis.Z, 1) }
+fun RotateCluster(
+    onRotate: (axis: Int, sign: Int) -> Unit,
+    modifier: Modifier = Modifier,
+    scale: Float = 1f,
+) {
+    val cell = CELL * scale
+    val gap = GAP * scale
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(gap),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            BlankCell(cell)
+            RoundButton("X+", size = cell) { onRotate(Axis.X, 1) }
+            RoundButton("Z+", size = cell) { onRotate(Axis.Z, 1) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-            RoundButton("Y−") { onRotate(Axis.Y, -1) }
-            BlankCell()
-            RoundButton("Y+") { onRotate(Axis.Y, 1) }
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            RoundButton("Y−", size = cell) { onRotate(Axis.Y, -1) }
+            BlankCell(cell)
+            RoundButton("Y+", size = cell) { onRotate(Axis.Y, 1) }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
-            RoundButton("Z−") { onRotate(Axis.Z, -1) }
-            RoundButton("X−") { onRotate(Axis.X, -1) }
-            BlankCell()
+        Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+            RoundButton("Z−", size = cell) { onRotate(Axis.Z, -1) }
+            RoundButton("X−", size = cell) { onRotate(Axis.X, -1) }
+            BlankCell(cell)
         }
     }
 }
@@ -146,7 +166,13 @@ private fun RoundButton(
         shape = CircleShape,
         colors = colors,
         contentPadding = PaddingValues(0.dp),
-        modifier = Modifier.size(size),
+        // requiredSize, not size: if a row runs short on width (e.g. Button Scale pushed a
+        // cluster wider than its share of the screen), `size()` lets the incoming width
+        // constraint override the requested one while height stays unconstrained — squishing
+        // the button into a horizontal oval instead of clipping it. requiredSize keeps every
+        // button a true circle no matter what the parent offers, even if that means part of a
+        // cluster runs off the edge.
+        modifier = Modifier.requiredSize(size),
     ) {
         Text(label, style = MaterialTheme.typography.labelLarge)
     }
@@ -155,6 +181,6 @@ private fun RoundButton(
 /** An empty grid cell, the same size as a real button, so blank corners/centers keep their row
  *  aligned with the others. */
 @Composable
-private fun BlankCell() {
-    androidx.compose.foundation.layout.Spacer(Modifier.size(CELL))
+private fun BlankCell(size: Dp = CELL) {
+    androidx.compose.foundation.layout.Spacer(Modifier.requiredSize(size))
 }
