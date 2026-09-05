@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -20,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rm.blokhead.data.Settings
 import com.rm.blokhead.game.BlockSet
@@ -47,28 +49,16 @@ fun SettingsScreen(
             text = "Settings",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 24.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
         )
 
-        SwitchRow(
-            title = "Diagonal D-Pad Corners",
-            subtitle = "Adds diagonal move buttons to the move d-pad's empty corners",
-            checked = settings.diagonalButtonsEnabled,
-            onCheckedChange = { onSettingsChange(settings.copy(diagonalButtonsEnabled = it)) },
-        )
-        SwitchRow(
-            title = "Left-Handed Mode",
-            subtitle = "Swaps the move and rotate control clusters to opposite sides",
-            checked = settings.leftHandedMode,
-            onCheckedChange = { onSettingsChange(settings.copy(leftHandedMode = it)) },
-        )
+        GroupHeader("Gameplay & Sound", topPadding = 8.dp)
         SwitchRow(
             title = "Sound",
             subtitle = "Move/rotate/lock/clear/game-over effects",
             checked = settings.soundEnabled,
             onCheckedChange = { onSettingsChange(settings.copy(soundEnabled = it)) },
         )
-
         IntSliderRow(
             title = "Starting Difficulty",
             value = settings.startingDifficulty,
@@ -88,7 +78,27 @@ fun SettingsScreen(
             range = 10..24,
             onValueChange = { onSettingsChange(settings.copy(wellHeight = it)) },
         )
+        SectionLabel("Block Set")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BlockSetChip("Flat", BlockSet.FLAT, settings, onSettingsChange)
+            BlockSetChip("Extended", BlockSet.EXTENDED, settings, onSettingsChange)
+            BlockSetChip("All", BlockSet.ALL, settings, onSettingsChange)
+        }
 
+        HorizontalDivider(modifier = Modifier.padding(top = 24.dp), color = MaterialTheme.colorScheme.outlineVariant)
+        GroupHeader("Controls")
+        SwitchRow(
+            title = "Diagonal D-Pad Corners",
+            subtitle = "Adds diagonal move buttons to the move d-pad's empty corners",
+            checked = settings.diagonalButtonsEnabled,
+            onCheckedChange = { onSettingsChange(settings.copy(diagonalButtonsEnabled = it)) },
+        )
+        SwitchRow(
+            title = "Left-Handed Mode",
+            subtitle = "Swaps the move and rotate control clusters to opposite sides",
+            checked = settings.leftHandedMode,
+            onCheckedChange = { onSettingsChange(settings.copy(leftHandedMode = it)) },
+        )
         SectionLabel("Button Position")
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Below Grid", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -98,7 +108,16 @@ fun SettingsScreen(
             value = settings.buttonVerticalPosition,
             onValueChange = { onSettingsChange(settings.copy(buttonVerticalPosition = it)) },
         )
-
+        PercentSliderRow(
+            title = "Button Scale",
+            // Each control cluster is a fixed ~156.dp-wide 3-column grid of true circles (see
+            // GameControls.kt's requiredSize use — buttons never squish to fit, so on a ~360.dp-
+            // wide phone both clusters combined only have room up to about 112% before the
+            // rightmost column would clip off the edge). Capped at 110% for a safety margin.
+            value = settings.buttonScale,
+            range = 0.7f..1.1f,
+            onValueChange = { onSettingsChange(settings.copy(buttonScale = it)) },
+        )
         PercentSliderRow(
             title = "Button Opacity",
             value = settings.buttonOpacity,
@@ -107,31 +126,34 @@ fun SettingsScreen(
             range = 0.2f..1f,
             onValueChange = { onSettingsChange(settings.copy(buttonOpacity = it)) },
         )
-
-        SectionLabel("Block Set")
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            BlockSetChip("Flat", BlockSet.FLAT, settings, onSettingsChange)
-            BlockSetChip("Extended", BlockSet.EXTENDED, settings, onSettingsChange)
-            BlockSetChip("All", BlockSet.ALL, settings, onSettingsChange)
-        }
-
         OutlinedButton(
             onClick = onShowGamepadBindings,
             modifier = Modifier
-                .padding(top = 32.dp)
+                .padding(top = 20.dp)
                 .gamepadFocusable(onActivate = onShowGamepadBindings),
         ) {
-            Text("Controller")
+            Text("Map Controls")
         }
+
         OutlinedButton(
             onClick = onBack,
             modifier = Modifier
-                .padding(top = 12.dp)
+                .padding(top = 24.dp)
                 .gamepadFocusable(onActivate = onBack),
         ) {
             Text("Back")
         }
     }
+}
+
+@Composable
+private fun GroupHeader(text: String, topPadding: Dp = 0.dp) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = topPadding, bottom = 4.dp),
+    )
 }
 
 @Composable

@@ -352,7 +352,7 @@ private fun GameScreen(
             // Column-with-spacer layout below, not a tweak of the same formula, since portrait's
             // aspect/spacer math assumes a container taller than it is wide and produces
             // negative/invalid values once it isn't.
-            val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH + 16.dp) * 2
+            val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH * settings.buttonScale + 16.dp) * 2
             val gridWidth = minOf(maxHeight * 0.6f, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
             Column(
@@ -385,13 +385,14 @@ private fun GameScreen(
             val leftModifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 8.dp)
             val rightModifier = Modifier.align(Alignment.CenterEnd).padding(horizontal = 8.dp)
             if (settings.leftHandedMode) {
-                RotateCluster(onRotate = onRotateAction, modifier = leftModifier)
+                RotateCluster(onRotate = onRotateAction, modifier = leftModifier, scale = settings.buttonScale)
                 MoveDPad(
                     diagonalEnabled = settings.diagonalButtonsEnabled,
                     onMove = onMove,
                     onDiagonalMove = onDiagonalMove,
                     onHardDrop = onHardDropAction,
                     modifier = rightModifier,
+                    scale = settings.buttonScale,
                 )
             } else {
                 MoveDPad(
@@ -400,8 +401,9 @@ private fun GameScreen(
                     onDiagonalMove = onDiagonalMove,
                     onHardDrop = onHardDropAction,
                     modifier = leftModifier,
+                    scale = settings.buttonScale,
                 )
-                RotateCluster(onRotate = onRotateAction, modifier = rightModifier)
+                RotateCluster(onRotate = onRotateAction, modifier = rightModifier, scale = settings.buttonScale)
             }
         } else {
             AndroidView(modifier = Modifier.fillMaxSize(), factory = { surfaceView })
@@ -449,6 +451,7 @@ private fun GameScreen(
                     diagonalEnabled = settings.diagonalButtonsEnabled,
                     leftHanded = settings.leftHandedMode,
                     opacity = settings.buttonOpacity,
+                    scale = settings.buttonScale,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp),
