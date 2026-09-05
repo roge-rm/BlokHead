@@ -75,6 +75,12 @@ class GameEngine(
      *  doesn't interrupt the pace of play. */
     private val clearFlashDuration = 0.1f
 
+    /** How long a piece rests on the stack (able to still slide/rotate) before it locks in place
+     *  — a grace period, not tied to fallSpeed/level in any way, so it felt disproportionately
+     *  long at higher difficulty; halved from the original's 1f pending feedback on the new
+     *  value. */
+    private val lockDelay = 0.5f
+
     private fun levelFactorFor(level: Int): Float = if (level < 5) level / 5f else level - 5f
 
     private fun spawnBlock() {
@@ -102,7 +108,7 @@ class GameEngine(
         elapsedSinceSpawn += deltaSeconds
         currentBlock.update(elapsedSinceSpawn)
         Collision.tryLowerBlock(tube, currentBlock, elapsedSinceSpawn)
-        if (elapsedSinceSpawn - currentBlock.lastFall > 1f) {
+        if (elapsedSinceSpawn - currentBlock.lastFall > lockDelay) {
             lockCurrentBlockAndAdvance()
         }
     }
