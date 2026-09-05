@@ -1,6 +1,13 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -14,15 +21,33 @@ android {
         minSdk = 27
         targetSdk = 37
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Release signing credentials are supplied via local.properties (never committed) as
+    // blokhead.release.{storeFile,storePassword,keyAlias,keyPassword}. Falls back to an
+    // unsigned release build when they're absent, so a plain checkout still builds.
+    val releaseStoreFile = localProperties.getProperty("blokhead.release.storeFile")
+    signingConfigs {
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = localProperties.getProperty("blokhead.release.storePassword")
+                keyAlias = localProperties.getProperty("blokhead.release.keyAlias")
+                keyPassword = localProperties.getProperty("blokhead.release.keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
             optimization {
                 enable = false
+            }
+            if (releaseStoreFile != null) {
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }
