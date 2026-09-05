@@ -82,19 +82,19 @@ fun GamepadBindingsScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(12.dp),
     ) {
         Text(
             text = "Controller",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = 4.dp),
         )
         Text(
             text = "Tap an action, then press the button you want to use for it.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 16.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
         )
 
         AnimatedVisibility(visible = message != null) {
@@ -102,7 +102,7 @@ fun GamepadBindingsScreen(
                 text = message.orEmpty(),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 12.dp),
+                modifier = Modifier.padding(bottom = 6.dp),
             )
         }
 
@@ -116,21 +116,22 @@ fun GamepadBindingsScreen(
             )
         }
 
-        OutlinedButton(
-            onClick = { onBindingsChange(GamepadBindings()) },
-            modifier = Modifier
-                .padding(top = 20.dp)
-                .gamepadFocusable(onActivate = { onBindingsChange(GamepadBindings()) }),
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(top = 4.dp),
         ) {
-            Text("Reset to Defaults")
-        }
-        OutlinedButton(
-            onClick = onBack,
-            modifier = Modifier
-                .padding(top = 12.dp)
-                .gamepadFocusable(onActivate = onBack),
-        ) {
-            Text("Back")
+            OutlinedButton(
+                onClick = { onBindingsChange(GamepadBindings()) },
+                modifier = Modifier.gamepadFocusable(onActivate = { onBindingsChange(GamepadBindings()) }),
+            ) {
+                Text("Reset to Defaults")
+            }
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.gamepadFocusable(onActivate = onBack),
+            ) {
+                Text("Back")
+            }
         }
     }
 }
@@ -152,7 +153,7 @@ private fun BindingRow(
             )
             .clickable(onClick = onClick)
             .gamepadFocusable(onActivate = onClick)
-            .padding(vertical = 10.dp, horizontal = 8.dp),
+            .padding(vertical = 2.dp, horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
