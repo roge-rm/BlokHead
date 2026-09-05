@@ -15,22 +15,6 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** One-finger drag distance (in dp) that fires a single move — small and deliberately close to
- *  the system touch slop, so the piece starts sliding almost the instant a drag begins rather
- *  than needing to "wind up" a large swipe first; a fast drag then just crosses many of these in
- *  quick succession (capped to [MOVE_STEPS_PER_EVENT] per processed touch event — see its doc
- *  comment) rather than needing a bigger step size to feel responsive. */
-private val MOVE_STEP = 16.dp
-
-/** Caps how many move steps a single processed touch event can fire at once. Android can batch
- *  several real motion samples into one delivered event under load (or just from a fast flick),
- *  which would otherwise cross several [MOVE_STEP] widths in one jump — instantly queuing up a
- *  pile of moves that then visibly slide through multiple cells one after another once the finger
- *  has already stopped. Capping to one per event spreads that same total drag distance across
- *  the next few events instead (arriving within milliseconds of each other during a real drag),
- *  so the piece never appears to move more than one cell for what reads as a single motion. */
-private const val MOVE_STEPS_PER_EVENT = 1
-
 /** Two-finger pan distance (in dp) that fires a single X/Y rotate once a gesture has committed to
  *  panning (see [ROTATE_PAN_COMMIT]/[ROTATE_TWIST_COMMIT_DEGREES]) — bigger than [MOVE_STEP]
  *  since it's measured on a two-finger centroid, which drifts more than one fingertip, and needs
@@ -58,26 +42,21 @@ private fun centroidAndAngleDegrees(a: Offset, b: Offset): Pair<Offset, Float> {
     return centroid to angle
 }
 
-private fun fireSteps(
-    accumulated: Float,
-    stepSize: Float,
-    maxSteps: Int = Int.MAX_VALUE,
-    onStep: (sign: Int) -> Unit,
-): Float {
-    val (steps, _) = stepsFromAccumulated(accumulated, stepSize)
-    val fired = steps.coerceIn(-maxSteps, maxSteps)
-    repeat(abs(fired)) { onStep(if (fired > 0) 1 else -1) }
-    // Unlike the uncapped case, the remainder here is measured against what was actually fired,
-    // not every step that was crossed — so anything past maxSteps stays queued to fire on the
-    // very next event instead of being silently dropped.
-    return accumulated - fired * stepSize
+private fun fireSteps(accumulated: Float, stepSize: Float, onStep: (sign: Int) -> Unit): Float {
+    val (steps, remainder) = stepsFromAccumulated(accumulated, stepSize)
+    repeat(abs(steps)) { onStep(if (steps > 0) 1 else -1) }
+    return remainder
 }
 
 /**
  * Direct-touch alternative to [GameControls]' on-screen buttons (see the `gestureControlsEnabled`
  * setting): everything happens as gestures on the grid itself, freeing the whole screen for it.
  *
- * - One-finger drag moves the piece (repeats while held, one step per [MOVE_STEP] crossed).
+ * - One-finger flick moves the piece exactly one space — whichever cardinal direction the drag
+ *   first crosses touch slop in, fired once. Holding and dragging further does nothing more; the
+ *   user provides repeat themselves by flicking again (lifting and re-dragging), same as they'd
+ *   provide their own sense of "faster" by flicking harder — there's deliberately no notion of
+ *   distance-based repeat or acceleration here.
  * - Two-finger drag rotates X/Y — horizontal pan → Y (matches [RotateCluster]'s horizontal Y
  *   buttons), vertical pan → X (matches its vertical X buttons).
  * - Two-finger twist rotates Z — the "secondary" axis gets the "secondary" gesture, mirroring the
@@ -107,7 +86,6 @@ fun Modifier.gestureControls(
     isInPauseZone: (position: Offset) -> Boolean = { false },
     onTogglePause: () -> Unit = {},
 ): Modifier = pointerInput(Unit) {
-    val moveStepPx = MOVE_STEP.toPx()
     val rotatePanStepPx = ROTATE_PAN_STEP.toPx()
     val rotatePanCommitPx = ROTATE_PAN_COMMIT.toPx()
 
@@ -168,14 +146,14 @@ fun Modifier.gestureControls(
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
 
-        // Phase 1: undecided — a single finger that hasn't yet crossed the move threshold. Races
-        // real elapsed time against new pointer activity, since a perfectly still finger produces
-        // no further events on its own and would otherwise never let a long-press resolve.
+        // Phase 1: undecided — a single finger that hasn't yet flicked. Races real elapsed time
+        // against new pointer activity, since a perfectly still finger produces no further events
+        // on its own and would otherwise never let a long-press resolve.
         var lastEventUptime = down.uptimeMillis
         var moveAccumX = 0f
         var moveAccumY = 0f
-        var resolvedToMove = false
-        while (!resolvedToMove) {
+        var firedMove = false
+        while (!firedMove) {
             val deadline = down.uptimeMillis + viewConfiguration.longPressTimeoutMillis
             val remaining = deadline - lastEventUptime
             if (remaining <= 0) {
@@ -202,14 +180,21 @@ fun Modifier.gestureControls(
             val delta = change.position - change.previousPosition
             moveAccumX += delta.x
             moveAccumY += delta.y
+            // Whichever axis first reads as a clear flick wins outright — a diagonal drag still
+            // only fires one move, in whichever direction it leans more, not both at once.
             if (abs(moveAccumX) > viewConfiguration.touchSlop || abs(moveAccumY) > viewConfiguration.touchSlop) {
-                resolvedToMove = true
+                if (abs(moveAccumX) >= abs(moveAccumY)) {
+                    onMove(Axis.X, if (moveAccumX > 0) 1 else -1)
+                } else {
+                    onMove(Axis.Y, if (moveAccumY > 0) -1 else 1)
+                }
+                firedMove = true
             }
         }
 
-        // Phase 2: move — one finger, already past the initial threshold. Independent X/Y
-        // accumulators so a mostly-diagonal drag can still fire both axes as each crosses its own
-        // threshold, rather than picking one "dominant" axis for the whole gesture.
+        // Phase 2: this gesture already fired its one move — further movement or holding does
+        // nothing more (see the doc comment above), but a second finger can still hand off to
+        // rotate for the rest of this same touch.
         while (true) {
             val pressed = awaitPointerEvent().changes.filter { it.pressed }
             if (pressed.isEmpty()) return@awaitEachGesture
@@ -217,13 +202,6 @@ fun Modifier.gestureControls(
                 runRotateLoop(pressed)
                 return@awaitEachGesture
             }
-            val change = pressed.first()
-            val delta = change.position - change.previousPosition
-            change.consume()
-            moveAccumX += delta.x
-            moveAccumY += delta.y
-            moveAccumX = fireSteps(moveAccumX, moveStepPx, MOVE_STEPS_PER_EVENT) { sign -> onMove(Axis.X, sign) }
-            moveAccumY = fireSteps(moveAccumY, moveStepPx, MOVE_STEPS_PER_EVENT) { sign -> onMove(Axis.Y, -sign) }
         }
     }
 }
