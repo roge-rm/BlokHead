@@ -76,10 +76,9 @@ class GameEngine(
     private val clearFlashDuration = 0.1f
 
     /** How long a piece rests on the stack (able to still slide/rotate) before it locks in place
-     *  — a grace period, not tied to fallSpeed/level in any way, so it felt disproportionately
-     *  long at higher difficulty; halved from the original's 1f pending feedback on the new
-     *  value. */
-    private val lockDelay = 0.5f
+     *  — a grace period, not tied to fallSpeed/level in any way. Halved twice now from the
+     *  original's 1f (1f -> 0.5f -> 0.25f) chasing a snappier feel; still not level-scaled. */
+    private val lockDelay = 0.25f
 
     private fun levelFactorFor(level: Int): Float = if (level < 5) level / 5f else level - 5f
 
