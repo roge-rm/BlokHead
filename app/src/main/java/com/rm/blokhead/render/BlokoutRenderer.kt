@@ -4,6 +4,7 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
 import com.rm.blokhead.game.GameEngine
+import com.rm.blokhead.game.Tube
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
@@ -11,6 +12,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.atan
+import kotlin.math.roundToInt
 import kotlin.math.tan
 
 /**
@@ -99,11 +101,21 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
         }
     }
 
+    /** The well's true accessible top: [Tube.dimensions]'s Z extent is the well's configured
+     *  height plus one layer of invisible headroom (see [Tube]'s own doc) — the camera, rendered
+     *  walls, and a freshly spawned piece all target this boundary instead, so what's drawn as
+     *  "the well" is exactly where a piece can actually be. */
+    private fun accessibleTop(tube: Tube): Float = (tube.dimensions[2] - 1).toFloat()
+
     private fun setUpCamera() {
         val tube = engine.tube
         val width = tube.dimensions[0].toFloat()
         val depth = tube.dimensions[1].toFloat()
-        val height = tube.dimensions[2].toFloat()
+        // tube.dimensions[2] is the array's full capacity (well height + 1 layer of invisible
+        // headroom, see Tube's own doc) — the camera and rendered walls target the *accessible*
+        // top just below that headroom layer, so what's drawn as "the well" is exactly where a
+        // piece can actually be, and a freshly spawned piece lines up flush with it.
+        val height = accessibleTop(tube)
         val aspect = viewportWidth.toFloat() / viewportHeight.toFloat()
         // Distance from the eye to the well's top opening. Closer means a freshly spawned piece
         // starts as a larger part of the view (and the near opening's angular size is bigger for
@@ -157,8 +169,15 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
 
     private fun drawWellGrid() {
         val tube = engine.tube
-        val zRings = Geometry.perceptuallyEvenZRings(tube.dimensions[2], standoffAboveTop, rungCount = 6)
-        val lines = Geometry.buildWellGridLines(tube.dimensions[0], tube.dimensions[1], tube.dimensions[2], zRings, wellLineColor)
+        val height = accessibleTop(tube)
+        // More rings for a taller well: perceptuallyEvenZRings deliberately spaces however many
+        // rings it's given evenly *on screen*, which otherwise makes a well look identical
+        // regardless of its actual depth — a taller well needs visibly more of them (a denser
+        // ladder of rungs), not just the same 6 stretched differently, for the height setting to
+        // read as an obvious difference rather than a number with no visual effect.
+        val rungCount = (height / 2.5f).roundToInt().coerceIn(4, 10)
+        val zRings = Geometry.perceptuallyEvenZRings(height.toInt(), standoffAboveTop, rungCount)
+        val lines = Geometry.buildWellGridLines(tube.dimensions[0], tube.dimensions[1], height.toInt(), zRings, wellLineColor)
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.multiplyMM(tempMatrix, 0, viewMatrix, 0, modelMatrix, 0)
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, tempMatrix, 0)
@@ -206,13 +225,14 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
         // block.position[2] follows the original's convention of 0 = the well's top opening,
         // falling towards negative values; the locked-cube grid here instead runs 0 = bottom
         // upward (matching Tube's array layout), so the Z position is re-based by the well's
-        // full height to land in that same space.
+        // accessible top (see accessibleTop()) to land in that same space, flush with the
+        // rendered wall geometry rather than one invisible headroom layer beyond it.
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.translateM(
             modelMatrix, 0,
             block.position[0] + 0.5f,
             block.position[1] + 0.5f,
-            block.position[2] + engine.tube.dimensions[2] + 0.5f,
+            block.position[2] + accessibleTop(engine.tube) + 0.5f,
         )
         val rotation = floatArrayOf(
             block.orientation[0][0], block.orientation[0][1], block.orientation[0][2], 0f,
