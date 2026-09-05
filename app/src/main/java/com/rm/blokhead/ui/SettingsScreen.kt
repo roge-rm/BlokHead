@@ -87,6 +87,15 @@ fun SettingsScreen(settings: Settings, onSettingsChange: (Settings) -> Unit, onB
             onValueChange = { onSettingsChange(settings.copy(buttonVerticalPosition = it)) },
         )
 
+        PercentSliderRow(
+            title = "Button Opacity",
+            value = settings.buttonOpacity,
+            // Floored above 0 so the buttons never fade all the way to invisible/untappable-by-
+            // sight — they'd still technically receive taps, but there'd be nothing to tap on.
+            range = 0.2f..1f,
+            onValueChange = { onSettingsChange(settings.copy(buttonOpacity = it)) },
+        )
+
         SectionLabel("Block Set")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BlockSetChip("Flat", BlockSet.FLAT, settings, onSettingsChange)
@@ -142,6 +151,12 @@ private fun IntSliderRow(
         valueRange = range.first.toFloat()..range.last.toFloat(),
         steps = (range.last - range.first - 1).coerceAtLeast(0),
     )
+}
+
+@Composable
+private fun PercentSliderRow(title: String, value: Float, range: ClosedFloatingPointRange<Float>, onValueChange: (Float) -> Unit) {
+    SectionLabel("$title: ${(value * 100).roundToInt()}%")
+    Slider(value = value, onValueChange = onValueChange, valueRange = range)
 }
 
 @Composable
