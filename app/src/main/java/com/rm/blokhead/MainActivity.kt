@@ -20,6 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,12 +30,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.rm.blokhead.audio.SfxPlayer
 import com.rm.blokhead.data.HighScoreEntry
 import com.rm.blokhead.data.HighScoreStore
+import com.rm.blokhead.data.Settings
+import com.rm.blokhead.data.SettingsStore
 import com.rm.blokhead.game.Axis
+import com.rm.blokhead.game.FormCatalog
 import com.rm.blokhead.game.GameEngine
 import com.rm.blokhead.render.BlokoutSurfaceView
 import com.rm.blokhead.ui.AppScreen
@@ -46,6 +51,7 @@ import com.rm.blokhead.ui.HudSnapshot
 import com.rm.blokhead.ui.MenuScreen
 import com.rm.blokhead.ui.NameEntryOverlay
 import com.rm.blokhead.ui.PausedOverlay
+import com.rm.blokhead.ui.SettingsScreen
 import com.rm.blokhead.ui.theme.BlokHeadTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -67,9 +73,13 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun BlokHeadApp() {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val highScoreStore = remember { HighScoreStore(context.applicationContext) }
+    val settingsStore = remember { SettingsStore(context.applicationContext) }
+    val settings by settingsStore.settings.collectAsState(initial = Settings())
     val sfx = remember { SfxPlayer(context.applicationContext) }
     DisposableEffect(sfx) { onDispose { sfx.release() } }
+    LaunchedEffect(settings.soundEnabled) { sfx.muted = !settings.soundEnabled }
 
     var screen by remember { mutableStateOf(AppScreen.MENU) }
     // Bumped each "Start Game", so GameScreen's remember(sessionId) below starts a fresh
@@ -87,10 +97,15 @@ private fun BlokHeadApp() {
                 sfx.playMenu()
                 screen = AppScreen.HIGH_SCORES
             },
+            onShowSettings = {
+                sfx.playMenu()
+                screen = AppScreen.SETTINGS
+            },
         )
 
         AppScreen.GAME -> GameScreen(
             sessionId = gameSessionId,
+            settings = settings,
             highScoreStore = highScoreStore,
             sfx = sfx,
             onExitToMenu = { screen = AppScreen.MENU },
@@ -101,14 +116,35 @@ private fun BlokHeadApp() {
             LaunchedEffect(Unit) { highScoreStore.entries.collect { entries = it } }
             HighScoreScreen(entries = entries, onBack = { sfx.playMenu(); screen = AppScreen.MENU })
         }
+
+        AppScreen.SETTINGS -> SettingsScreen(
+            settings = settings,
+            onSettingsChange = { updated -> coroutineScope.launch { settingsStore.save(updated) } },
+            onBack = { sfx.playMenu(); screen = AppScreen.MENU },
+        )
     }
 }
 
 @Composable
-private fun GameScreen(sessionId: Int, highScoreStore: HighScoreStore, sfx: SfxPlayer, onExitToMenu: () -> Unit) {
+private fun GameScreen(
+    sessionId: Int,
+    settings: Settings,
+    highScoreStore: HighScoreStore,
+    sfx: SfxPlayer,
+    onExitToMenu: () -> Unit,
+) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val engine = remember(sessionId) { GameEngine() }
+    // Captured once per session (sessionId only bumps on "Start Game"), so settings changed
+    // later from the menu never affect a game already in progress.
+    val engine = remember(sessionId) {
+        GameEngine(
+            forms = FormCatalog.formsFor(settings.blockSet),
+            startLevel = settings.startingDifficulty,
+            width = settings.wellSize,
+            depth = settings.wellSize,
+        )
+    }
     val surfaceView = remember(sessionId) { BlokoutSurfaceView(context, engine) }
 
     // GameEngine's mutable state is owned by the GL thread (see BlokoutRenderer); this polls the
@@ -178,10 +214,14 @@ private fun GameScreen(sessionId: Int, highScoreStore: HighScoreStore, sfx: SfxP
             )
         }
 
-        // Placing the controls right after the grid's bottom edge (plus a small gap) keeps them
-        // just clear of it regardless of screen size, rather than at a fixed guessed position.
+        // Default position is right after the grid's bottom edge (plus a small gap), which keeps
+        // controls just clear of it regardless of screen size; the "Button Position" setting
+        // slides that down towards the bottom edge instead of a fixed guessed position.
+        val minSpacerHeight = containerHeight * gridBottomFraction + 12.dp
+        val maxSpacerHeight = (containerHeight - 200.dp).coerceAtLeast(minSpacerHeight)
+        val spacerHeight = lerp(minSpacerHeight, maxSpacerHeight, settings.buttonVerticalPosition)
         Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(Modifier.height(containerHeight * gridBottomFraction + 12.dp))
+            Spacer(Modifier.height(spacerHeight))
             GameControls(
                 onMove = { axis, sign ->
                     sfx.playMove()
@@ -192,11 +232,20 @@ private fun GameScreen(sessionId: Int, highScoreStore: HighScoreStore, sfx: SfxP
                         }
                     }
                 },
+                onDiagonalMove = { xSign, ySign ->
+                    sfx.playMove()
+                    surfaceView.enqueue {
+                        if (xSign < 0) moveLeft() else moveRight()
+                        if (ySign < 0) moveBackward() else moveForward()
+                    }
+                },
                 onRotate = { axis, sign ->
                     sfx.playRotate()
                     surfaceView.enqueue { rotate(axis, sign) }
                 },
                 onHardDrop = { surfaceView.enqueue { hardDrop() } },
+                diagonalEnabled = settings.diagonalButtonsEnabled,
+                leftHanded = settings.leftHandedMode,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp),
@@ -235,3 +284,5 @@ private fun GameScreen(sessionId: Int, highScoreStore: HighScoreStore, sfx: SfxP
         }
     }
 }
+
+private fun lerp(start: Dp, stop: Dp, fraction: Float): Dp = start + (stop - start) * fraction

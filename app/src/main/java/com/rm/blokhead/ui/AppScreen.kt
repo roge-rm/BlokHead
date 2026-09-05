@@ -7,4 +7,5 @@ enum class AppScreen {
     MENU,
     GAME,
     HIGH_SCORES,
+    SETTINGS,
 }

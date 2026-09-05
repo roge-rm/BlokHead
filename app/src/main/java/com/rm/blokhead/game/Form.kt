@@ -16,6 +16,15 @@ class Form(
         cubes[z * dimensions[0] * dimensions[1] + y * dimensions[0] + x]
 }
 
+/** Matches the original's own "Block Set" menu option (FLAT/EXTENDED), which restricted play to
+ *  pieces that are a single layer thick (dimensions[2] == 1, i.e. behave like classic 2D Tetris
+ *  pieces extruded flat) versus ones that actually extend into the third dimension. */
+enum class BlockSet {
+    FLAT,
+    EXTENDED,
+    ALL,
+}
+
 /**
  * All 32 blokout piece shapes, ported from data/forms.dat (originally loaded at runtime from a
  * text file; embedded here since there's no equivalent asset-loading need in the Kotlin port).
@@ -25,6 +34,14 @@ class Form(
  */
 object FormCatalog {
     val allForms: List<Form> = parse(FORMS_DATA)
+    val flatForms: List<Form> = allForms.filter { it.dimensions[2] == 1 }
+    val extendedForms: List<Form> = allForms.filter { it.dimensions[2] > 1 }
+
+    fun formsFor(blockSet: BlockSet): List<Form> = when (blockSet) {
+        BlockSet.FLAT -> flatForms
+        BlockSet.EXTENDED -> extendedForms
+        BlockSet.ALL -> allForms
+    }
 
     private fun parse(data: String): List<Form> {
         val tokens = ArrayDeque(
