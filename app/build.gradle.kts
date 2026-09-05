@@ -20,8 +20,8 @@ android {
         applicationId = "com.rm.blokhead"
         minSdk = 27
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.2.1"
+        versionCode = 7
+        versionName = "1.2.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
