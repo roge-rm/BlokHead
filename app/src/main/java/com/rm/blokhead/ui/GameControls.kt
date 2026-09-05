@@ -62,15 +62,18 @@ fun GameControls(
 }
 
 /** Move d-pad, optionally with diagonal buttons filling the corners (blank when disabled, so
- *  the up/down buttons stay in the exact same spot either way). */
+ *  the up/down buttons stay in the exact same spot either way). Public (not `private`, unlike
+ *  the rest of this file's helpers) so the landscape layout in MainActivity.kt can place it
+ *  standalone at a screen edge instead of only via [GameControls]' single full-width row. */
 @Composable
-private fun MoveDPad(
+fun MoveDPad(
     diagonalEnabled: Boolean,
     onMove: (axis: Int, sign: Int) -> Unit,
     onDiagonalMove: (xSign: Int, ySign: Int) -> Unit,
     onHardDrop: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
             if (diagonalEnabled) RoundButton("↖") { onDiagonalMove(-1, 1) } else BlankCell()
             RoundButton("▲") { onMove(Axis.Y, 1) }
@@ -108,10 +111,11 @@ private fun MoveDPad(
  *  Y-      Y+
  *  Z- X-
  *  ```
- */
+ *
+ *  Public for the same reason as [MoveDPad] — reused standalone in the landscape layout. */
 @Composable
-private fun RotateCluster(onRotate: (axis: Int, sign: Int) -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun RotateCluster(onRotate: (axis: Int, sign: Int) -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
             BlankCell()
             RoundButton("X+") { onRotate(Axis.X, 1) }

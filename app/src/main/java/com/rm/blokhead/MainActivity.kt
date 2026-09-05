@@ -1,5 +1,6 @@
 package com.rm.blokhead
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -9,14 +10,17 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,8 +35,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,6 +56,7 @@ import com.rm.blokhead.game.GameEngine
 import com.rm.blokhead.game.resolveGamepadAction
 import com.rm.blokhead.data.GamepadAction
 import com.rm.blokhead.render.BlokoutSurfaceView
+import com.rm.blokhead.render.wellBackgroundColor
 import com.rm.blokhead.ui.AppScreen
 import com.rm.blokhead.ui.GameControls
 import com.rm.blokhead.ui.GameHud
@@ -58,13 +65,21 @@ import com.rm.blokhead.ui.GamepadBindingsScreen
 import com.rm.blokhead.ui.HighScoreScreen
 import com.rm.blokhead.ui.HudSnapshot
 import com.rm.blokhead.ui.MenuScreen
+import com.rm.blokhead.ui.MoveDPad
 import com.rm.blokhead.ui.NameEntryOverlay
 import com.rm.blokhead.ui.PausedOverlay
+import com.rm.blokhead.ui.RotateCluster
 import com.rm.blokhead.ui.SettingsScreen
 import com.rm.blokhead.ui.gamepadFocusable
 import com.rm.blokhead.ui.theme.BlokHeadTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** Each control cluster's fixed footprint in [GameControls]'s [MoveDPad]/[RotateCluster] (3
+ *  columns of 48.dp cells with 6.dp gaps) — used only to keep the landscape layout's centered
+ *  grid from ever overlapping the clusters beside it; not imported directly since those are
+ *  private constants of a different file's internal layout. */
+private val LANDSCAPE_CLUSTER_WIDTH = 156.dp
 
 class MainActivity : ComponentActivity() {
     // Activity-level field (not `remember`-ed — a composable can't be reached from
@@ -271,73 +286,146 @@ private fun GameScreen(
         }
     }
 
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        AndroidView(modifier = Modifier.fillMaxSize(), factory = { surfaceView })
-
-        GameHud(snapshot = hud, modifier = Modifier.fillMaxWidth())
-
-        // BlokoutRenderer's camera solves the vertical FOV so the well's near opening exactly
-        // fills the viewport width; since the well is square (width == depth), that makes the
-        // opening's projected height a fixed `aspect` fraction of the screen height, centered —
-        // i.e. the rendered grid occupies the vertical band [0.5 - aspect/2, 0.5 + aspect/2].
-        val containerHeight = maxHeight
-        val aspect = maxWidth.value / maxHeight.value
-        val gridBottomFraction = 0.5f + aspect / 2f
-        val gridTopHeight = containerHeight * (0.5f - aspect / 2f)
-
-        // Tapping anywhere above the grid (the HUD's band included) pauses/unpauses — placed
-        // before the controls/overlays below so it never steals taps meant for them, and it's
-        // a no-op once the game has ended (pausing a finished game doesn't mean anything).
-        if (!hud.isGameOver) {
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(gridTopHeight)
-                    .pointerInput(engine) {
-                        detectTapGestures {
-                            surfaceView.enqueue { setPaused(!isPaused) }
-                        }
-                    },
-            )
+    // Shared by both orientation branches below, so the move/rotate/drop wiring exists exactly
+    // once regardless of which layout is currently shown.
+    val onMove: (Int, Int) -> Unit = { axis, sign ->
+        sfx.playMove()
+        surfaceView.enqueue {
+            when (axis) {
+                Axis.X -> if (sign < 0) moveLeft() else moveRight()
+                else -> if (sign < 0) moveBackward() else moveForward()
+            }
         }
+    }
+    val onDiagonalMove: (Int, Int) -> Unit = { xSign, ySign ->
+        sfx.playMove()
+        surfaceView.enqueue {
+            if (xSign < 0) moveLeft() else moveRight()
+            if (ySign < 0) moveBackward() else moveForward()
+        }
+    }
+    val onRotateAction: (Int, Int) -> Unit = { axis, sign ->
+        sfx.playRotate()
+        surfaceView.enqueue { rotate(axis, sign) }
+    }
+    val onHardDropAction: () -> Unit = { surfaceView.enqueue { hardDrop() } }
 
-        // Default position is right after the grid's bottom edge (plus a small gap), which keeps
-        // controls just clear of it regardless of screen size; the "Button Position" setting
-        // slides that down towards the bottom edge instead of a fixed guessed position.
-        val minSpacerHeight = containerHeight * gridBottomFraction + 12.dp
-        val maxSpacerHeight = (containerHeight - 200.dp).coerceAtLeast(minSpacerHeight)
-        val spacerHeight = lerp(minSpacerHeight, maxSpacerHeight, settings.buttonVerticalPosition)
-        Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(Modifier.height(spacerHeight))
-            GameControls(
-                onMove = { axis, sign ->
-                    sfx.playMove()
-                    surfaceView.enqueue {
-                        when (axis) {
-                            Axis.X -> if (sign < 0) moveLeft() else moveRight()
-                            else -> if (sign < 0) moveBackward() else moveForward()
-                        }
-                    }
-                },
-                onDiagonalMove = { xSign, ySign ->
-                    sfx.playMove()
-                    surfaceView.enqueue {
-                        if (xSign < 0) moveLeft() else moveRight()
-                        if (ySign < 0) moveBackward() else moveForward()
-                    }
-                },
-                onRotate = { axis, sign ->
-                    sfx.playRotate()
-                    surfaceView.enqueue { rotate(axis, sign) }
-                },
-                onHardDrop = { surfaceView.enqueue { hardDrop() } },
-                diagonalEnabled = settings.diagonalButtonsEnabled,
-                leftHanded = settings.leftHandedMode,
-                opacity = settings.buttonOpacity,
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(wellBackgroundColor),
+    ) {
+        if (isLandscape) {
+            // Pillarboxed: the grid (HUD + well) sits centered at a portrait-like aspect ratio
+            // with dark margins on both sides, and the two control clusters are vertically
+            // centered in those margins — a fundamentally different shape than portrait's
+            // Column-with-spacer layout below, not a tweak of the same formula, since portrait's
+            // aspect/spacer math assumes a container taller than it is wide and produces
+            // negative/invalid values once it isn't.
+            val clusterClearance = (LANDSCAPE_CLUSTER_WIDTH + 16.dp) * 2
+            val gridWidth = minOf(maxHeight * 0.6f, maxWidth - clusterClearance).coerceAtLeast(0.dp)
+
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp),
-            )
+                    .align(Alignment.Center)
+                    .width(gridWidth)
+                    .fillMaxHeight(),
+            ) {
+                // No large empty "above the grid" band exists once the grid fills most of the
+                // height, so landscape's pause-tap target is just the HUD bar itself — smaller
+                // than portrait's, but always present and discoverable.
+                GameHud(
+                    snapshot = hud,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(engine) {
+                            detectTapGestures {
+                                if (!hud.isGameOver) surfaceView.enqueue { setPaused(!isPaused) }
+                            }
+                        },
+                )
+                AndroidView(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    factory = { surfaceView },
+                )
+            }
+
+            // Button Position only makes sense for portrait's below-the-grid stack; landscape
+            // always centers both clusters vertically in the side margins instead.
+            val leftModifier = Modifier.align(Alignment.CenterStart).padding(horizontal = 8.dp)
+            val rightModifier = Modifier.align(Alignment.CenterEnd).padding(horizontal = 8.dp)
+            if (settings.leftHandedMode) {
+                RotateCluster(onRotate = onRotateAction, modifier = leftModifier)
+                MoveDPad(
+                    diagonalEnabled = settings.diagonalButtonsEnabled,
+                    onMove = onMove,
+                    onDiagonalMove = onDiagonalMove,
+                    onHardDrop = onHardDropAction,
+                    modifier = rightModifier,
+                )
+            } else {
+                MoveDPad(
+                    diagonalEnabled = settings.diagonalButtonsEnabled,
+                    onMove = onMove,
+                    onDiagonalMove = onDiagonalMove,
+                    onHardDrop = onHardDropAction,
+                    modifier = leftModifier,
+                )
+                RotateCluster(onRotate = onRotateAction, modifier = rightModifier)
+            }
+        } else {
+            AndroidView(modifier = Modifier.fillMaxSize(), factory = { surfaceView })
+
+            GameHud(snapshot = hud, modifier = Modifier.fillMaxWidth())
+
+            // BlokoutRenderer's camera solves the vertical FOV so the well's near opening exactly
+            // fills the viewport width; since the well is square (width == depth), that makes the
+            // opening's projected height a fixed `aspect` fraction of the screen height, centered —
+            // i.e. the rendered grid occupies the vertical band [0.5 - aspect/2, 0.5 + aspect/2].
+            val containerHeight = maxHeight
+            val aspect = maxWidth.value / maxHeight.value
+            val gridBottomFraction = 0.5f + aspect / 2f
+            val gridTopHeight = containerHeight * (0.5f - aspect / 2f)
+
+            // Tapping anywhere above the grid (the HUD's band included) pauses/unpauses — placed
+            // before the controls/overlays below so it never steals taps meant for them, and it's
+            // a no-op once the game has ended (pausing a finished game doesn't mean anything).
+            if (!hud.isGameOver) {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(gridTopHeight)
+                        .pointerInput(engine) {
+                            detectTapGestures {
+                                surfaceView.enqueue { setPaused(!isPaused) }
+                            }
+                        },
+                )
+            }
+
+            // Default position is right after the grid's bottom edge (plus a small gap), which
+            // keeps controls just clear of it regardless of screen size; the "Button Position"
+            // setting slides that down towards the bottom edge instead of a fixed guessed position.
+            val minSpacerHeight = containerHeight * gridBottomFraction + 12.dp
+            val maxSpacerHeight = (containerHeight - 200.dp).coerceAtLeast(minSpacerHeight)
+            val spacerHeight = lerp(minSpacerHeight, maxSpacerHeight, settings.buttonVerticalPosition)
+            Column(modifier = Modifier.fillMaxSize()) {
+                Spacer(Modifier.height(spacerHeight))
+                GameControls(
+                    onMove = onMove,
+                    onDiagonalMove = onDiagonalMove,
+                    onRotate = onRotateAction,
+                    onHardDrop = onHardDropAction,
+                    diagonalEnabled = settings.diagonalButtonsEnabled,
+                    leftHanded = settings.leftHandedMode,
+                    opacity = settings.buttonOpacity,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                )
+            }
         }
 
         AnimatedVisibility(
