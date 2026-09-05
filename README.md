@@ -3,8 +3,7 @@
 BlokHead is a native Android port of [Blokout](https://jlehtinen.net/blokout/), a 3D falling-block
 puzzle game from the late '90s. Pieces made of cubes fall through a square well and you move and
 rotate them on all three axes — not just left/right and spin — to complete and clear full
-horizontal layers before the stack reaches the top. Imagine Tetris, but the well has depth as well
-as width, and so do the pieces.
+horizontal layers before the stack reaches the top.
 
 This is a direct port: the well/piece/collision/scoring logic is translated line-for-line from the
 original C source into pure Kotlin, and only the rendering (fixed-function GL1 → shader-based
