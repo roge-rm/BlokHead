@@ -139,7 +139,7 @@ private fun GameScreen(sessionId: Int, highScoreStore: HighScoreStore, onExitToM
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(16.dp),
+                .padding(horizontal = 4.dp, vertical = 16.dp),
         )
 
         if (hud.isGameOver) {

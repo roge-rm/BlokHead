@@ -76,27 +76,38 @@ object Geometry {
         }
     }
 
-    /** Builds the well's wireframe grid: floor grid lines plus vertical corner edges, matching
-     *  the original's tube display list, as GL_LINES vertex data (no color baked in — callers
-     *  set a uniform color by drawing this list with a fixed vertex color instead). */
+    /** Builds the well's wireframe grid: a full unit grid on the floor AND all four side walls
+     *  (matching the reference's gridded/textured walls, not just a floor grid with plain corner
+     *  edges), as GL_LINES vertex data (no color baked in — callers set a uniform color by
+     *  drawing this list with a fixed vertex color instead). */
     fun buildWellGridLines(width: Int, depth: Int, height: Int, color: FloatArray): FloatList {
         val out = ArrayList<Float>()
         fun line(x0: Float, y0: Float, z0: Float, x1: Float, y1: Float, z1: Float) {
             out.add(x0); out.add(y0); out.add(z0); out.add(color[0]); out.add(color[1]); out.add(color[2]); out.add(color[3])
             out.add(x1); out.add(y1); out.add(z1); out.add(color[0]); out.add(color[1]); out.add(color[2]); out.add(color[3])
         }
-        // Floor grid.
+        // Floor grid (z = 0).
         for (x in 0..width) line(x.toFloat(), 0f, 0f, x.toFloat(), depth.toFloat(), 0f)
         for (y in 0..depth) line(0f, y.toFloat(), 0f, width.toFloat(), y.toFloat(), 0f)
-        // Vertical corner edges up to the well's height.
-        for (x in intArrayOf(0, width)) for (y in intArrayOf(0, depth)) {
-            line(x.toFloat(), y.toFloat(), 0f, x.toFloat(), y.toFloat(), height.toFloat())
+
+        // Wall rings along z: a well is much taller than it is wide, and the camera looks straight
+        // down that same axis, so one ring per height unit perspective-compresses into a dense,
+        // uneven-looking cluster near the far end. Capping the ring count keeps wall rungs roughly
+        // as visually even as the floor's own grid, regardless of how deep the well is.
+        val maxRungs = 6
+        val zStep = maxOf(1, (height + maxRungs - 1) / maxRungs)
+        val zRings = (0..height step zStep).toMutableList().also { if (it.last() != height) it.add(height) }
+
+        // Front/back walls (y = 0 and y = depth): a unit grid over x, ringed over z.
+        for (y in intArrayOf(0, depth)) {
+            for (x in 0..width) line(x.toFloat(), y.toFloat(), 0f, x.toFloat(), y.toFloat(), height.toFloat())
+            for (z in zRings) line(0f, y.toFloat(), z.toFloat(), width.toFloat(), y.toFloat(), z.toFloat())
         }
-        // Top outline.
-        line(0f, 0f, height.toFloat(), width.toFloat(), 0f, height.toFloat())
-        line(width.toFloat(), 0f, height.toFloat(), width.toFloat(), depth.toFloat(), height.toFloat())
-        line(width.toFloat(), depth.toFloat(), height.toFloat(), 0f, depth.toFloat(), height.toFloat())
-        line(0f, depth.toFloat(), height.toFloat(), 0f, 0f, height.toFloat())
+        // Left/right walls (x = 0 and x = width): a unit grid over y, ringed over z.
+        for (x in intArrayOf(0, width)) {
+            for (y in 0..depth) line(x.toFloat(), y.toFloat(), 0f, x.toFloat(), y.toFloat(), height.toFloat())
+            for (z in zRings) line(x.toFloat(), 0f, z.toFloat(), x.toFloat(), depth.toFloat(), z.toFloat())
+        }
         return out
     }
 }
