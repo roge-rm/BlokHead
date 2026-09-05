@@ -12,20 +12,33 @@ import com.rm.blokhead.game.Axis
 import com.rm.blokhead.game.stepsFromAccumulated
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.hypot
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** One-finger drag distance (in dp) that fires a single move — roughly 2/3 of a control button's
  *  width, so a deliberate drag reads as one distinct step rather than needing a huge swipe. */
 private val MOVE_STEP = 32.dp
 
-/** Two-finger pan distance (in dp) that fires a single X/Y rotate. Slightly larger than
- *  [MOVE_STEP] since it's measured on a two-finger centroid, which drifts more than one fingertip. */
-private val ROTATE_PAN_STEP = 40.dp
+/** Two-finger pan distance (in dp) that fires a single X/Y rotate once a gesture has committed to
+ *  panning (see [ROTATE_PAN_COMMIT]/[ROTATE_TWIST_COMMIT_DEGREES]) — bigger than [MOVE_STEP]
+ *  since it's measured on a two-finger centroid, which drifts more than one fingertip, and needs
+ *  a deliberately large motion per rotate so a two-finger gesture doesn't spin the piece many
+ *  times over from an ordinary amount of hand movement. */
+private val ROTATE_PAN_STEP = 72.dp
 
-/** Two-finger twist angle (in degrees) that fires a single Z rotate — big enough that ordinary
- *  hand jitter while panning/pinching doesn't cross it by accident, small enough that a
- *  deliberate twist yields a few steps. */
-private const val ROTATE_TWIST_STEP_DEGREES = 25f
+/** Two-finger twist angle (in degrees) that fires a single Z rotate once a gesture has committed
+ *  to twisting — likewise sized so a natural twist yields just a couple of steps, not a dozen. */
+private const val ROTATE_TWIST_STEP_DEGREES = 45f
+
+/** How far a two-finger gesture's pan/twist has to travel before it *commits* to being a pan or
+ *  a twist gesture for the rest of that gesture (whichever crosses its own threshold first) —
+ *  much smaller than the step sizes above, just enough to tell intent apart. Once committed, the
+ *  other axis is ignored entirely: without this, an imprecise real-world twist (which naturally
+ *  drifts the centroid a little) or an imprecise pan (which naturally rotates the finger pair a
+ *  little) would fire both X/Y *and* Z rotates from the same motion, compounding into the piece
+ *  spinning far more than intended. */
+private val ROTATE_PAN_COMMIT = 16.dp
+private const val ROTATE_TWIST_COMMIT_DEGREES = 12f
 
 private fun centroidAndAngleDegrees(a: Offset, b: Offset): Pair<Offset, Float> {
     val centroid = Offset((a.x + b.x) / 2f, (a.y + b.y) / 2f)
@@ -67,29 +80,58 @@ fun Modifier.gestureControls(
 ): Modifier = pointerInput(Unit) {
     val moveStepPx = MOVE_STEP.toPx()
     val rotatePanStepPx = ROTATE_PAN_STEP.toPx()
+    val rotatePanCommitPx = ROTATE_PAN_COMMIT.toPx()
 
     // Two (or more) fingers down: interpret the pinch centroid's pan as X/Y rotate and the pair's
-    // angle as a Z twist, for as long as at least 2 fingers stay down.
+    // angle as a Z twist, for as long as at least 2 fingers stay down. A gesture commits to
+    // exactly one of pan/twist (whichever crosses its own small commit threshold first) and
+    // ignores the other for the rest of the gesture — seeing both at once, uncommitted, would
+    // double-fire from a single real-world motion (see the constants' doc comments above).
     suspend fun AwaitPointerEventScope.runRotateLoop(initialChanges: List<PointerInputChange>) {
         var (lastCentroid, lastAngle) = centroidAndAngleDegrees(initialChanges[0].position, initialChanges[1].position)
         var panAccumX = 0f
         var panAccumY = 0f
         var twistAccumDegrees = 0f
+        var committedToPan = false
+        var committedToTwist = false
         while (true) {
             val pressed = awaitPointerEvent().changes.filter { it.pressed }
             if (pressed.size < 2) return
             val (centroid, angle) = centroidAndAngleDegrees(pressed[0].position, pressed[1].position)
-            panAccumX += centroid.x - lastCentroid.x
-            panAccumY += centroid.y - lastCentroid.y
+            val panDeltaX = centroid.x - lastCentroid.x
+            val panDeltaY = centroid.y - lastCentroid.y
             var angleDelta = angle - lastAngle
             if (angleDelta > 180f) angleDelta -= 360f
             if (angleDelta < -180f) angleDelta += 360f
-            twistAccumDegrees += angleDelta
             lastCentroid = centroid
             lastAngle = angle
-            panAccumX = fireSteps(panAccumX, rotatePanStepPx) { sign -> onRotate(Axis.Y, sign) }
-            panAccumY = fireSteps(panAccumY, rotatePanStepPx) { sign -> onRotate(Axis.X, -sign) }
-            twistAccumDegrees = fireSteps(twistAccumDegrees, ROTATE_TWIST_STEP_DEGREES) { sign -> onRotate(Axis.Z, sign) }
+
+            if (!committedToPan && !committedToTwist) {
+                panAccumX += panDeltaX
+                panAccumY += panDeltaY
+                twistAccumDegrees += angleDelta
+                val panDistance = hypot(panAccumX, panAccumY)
+                if (panDistance > rotatePanCommitPx) {
+                    committedToPan = true
+                    twistAccumDegrees = 0f
+                } else if (abs(twistAccumDegrees) > ROTATE_TWIST_COMMIT_DEGREES) {
+                    committedToTwist = true
+                    panAccumX = 0f
+                    panAccumY = 0f
+                }
+            } else if (committedToPan) {
+                panAccumX += panDeltaX
+                panAccumY += panDeltaY
+            } else {
+                twistAccumDegrees += angleDelta
+            }
+
+            if (committedToPan) {
+                panAccumX = fireSteps(panAccumX, rotatePanStepPx) { sign -> onRotate(Axis.Y, sign) }
+                panAccumY = fireSteps(panAccumY, rotatePanStepPx) { sign -> onRotate(Axis.X, -sign) }
+            } else if (committedToTwist) {
+                twistAccumDegrees = fireSteps(twistAccumDegrees, ROTATE_TWIST_STEP_DEGREES) { sign -> onRotate(Axis.Z, sign) }
+            }
             pressed.forEach { it.consume() }
         }
     }
