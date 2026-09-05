@@ -40,9 +40,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.rm.blokhead.audio.SfxPlayer
 import com.rm.blokhead.data.GamepadBindings
 import com.rm.blokhead.data.GamepadBindingsStore
@@ -210,6 +213,31 @@ private fun GameScreen(
         )
     }
     val surfaceView = remember(sessionId) { BlokoutSurfaceView(context, engine) }
+
+    // Nothing else in this app matches the Activity's own lifecycle to the game/GL surface's —
+    // without this, backgrounding only *looks* paused because Android happens to tear down the
+    // GL surface for an invisible window (stopping onDrawFrame, which is what drives
+    // engine.update()); that's incidental, not guaranteed (multi-window/some launchers' recent-
+    // apps preview can keep the surface alive), and GLSurfaceView's own docs call for onPause()/
+    // onResume() regardless. ON_STOP pauses the game the same way tapping the grid does (so it
+    // resumes exactly where it was, PAUSED overlay and all, never auto-unpausing on return) and
+    // suspends the GL thread; ON_START only resumes the GL thread, leaving the game paused until
+    // the player explicitly taps to continue.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, surfaceView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    surfaceView.enqueue { setPaused(true) }
+                    surfaceView.onPause()
+                }
+                Lifecycle.Event.ON_START -> surfaceView.onResume()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // GameEngine's mutable state is owned by the GL thread (see BlokoutRenderer); this polls the
     // plain Int/Boolean fields on a timer for display rather than wiring a proper state stream,
