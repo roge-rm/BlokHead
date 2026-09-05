@@ -16,7 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -253,12 +256,35 @@ private fun GameScreen(
             )
         }
 
+        var showExitConfirm by remember(sessionId) { mutableStateOf(false) }
         AnimatedVisibility(
             visible = hud.isPaused && !hud.isGameOver,
             enter = fadeIn(animationSpec = tween(150)),
             exit = fadeOut(animationSpec = tween(150)),
         ) {
-            PausedOverlay()
+            PausedOverlay(onMenuClick = { showExitConfirm = true })
+        }
+
+        if (showExitConfirm) {
+            AlertDialog(
+                onDismissRequest = { showExitConfirm = false },
+                title = { Text("Quit to Menu?") },
+                text = { Text("Your current game will be lost.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showExitConfirm = false
+                        sfx.playMenu()
+                        onExitToMenu()
+                    }) {
+                        Text("Quit")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitConfirm = false }) {
+                        Text("Cancel")
+                    }
+                },
+            )
         }
 
         if (hud.isGameOver) {

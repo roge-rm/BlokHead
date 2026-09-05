@@ -63,21 +63,29 @@ fun GameHud(snapshot: HudSnapshot, modifier: Modifier = Modifier) {
 
 /** Shown while [GameEngine.isPaused] — dims the (still-visible-through-it) grid behind it and
  *  labels the frozen state. Tapping the same top-of-screen zone that triggered the pause
- *  unpauses; this overlay itself doesn't intercept taps, so that gesture keeps working while
- *  it's shown. */
+ *  unpauses; this overlay itself only intercepts taps on the Menu button, so that gesture keeps
+ *  working everywhere else while it's shown. */
 @Composable
-fun PausedOverlay(modifier: Modifier = Modifier) {
+fun PausedOverlay(onMenuClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background.copy(alpha = 0.75f)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            text = "PAUSED",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "PAUSED",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            OutlinedButton(
+                onClick = onMenuClick,
+                modifier = Modifier.padding(top = 24.dp),
+            ) {
+                Text("Menu")
+            }
+        }
     }
 }
 
