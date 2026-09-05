@@ -124,7 +124,11 @@ class GameEngine(
 
     fun rotate(axis: Int, sign: Int) {
         if (isFrozen) return
-        Collision.tryTurnBlock(tube, currentBlock, axis, sign, elapsedSinceSpawn)
+        // X and Z felt backwards from what players expect (Y's direction reads fine as-is) —
+        // flipped once here, the single seam every input path (on-screen buttons, gamepad) funnels
+        // through, rather than touching each caller's own notion of "+"/"-".
+        val effectiveSign = if (axis == Axis.Y) sign else -sign
+        Collision.tryTurnBlock(tube, currentBlock, axis, effectiveSign, elapsedSinceSpawn)
     }
 
     private fun tryMove(axis: Int, sign: Int) {
