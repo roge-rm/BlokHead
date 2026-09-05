@@ -75,8 +75,8 @@ This project targets a GitHub release only; there's no Play Store listing.
 
 - Game design and original implementation: Copyright (C) 1998-1999 Johannes Lehtinen and Petri
   Salmi, from [jlehtine/blokout](https://github.com/jlehtine/blokout).
-- Ported to Kotlin/Android, with a rebuilt touch UI and OpenGL ES 2.0 renderer, by Dan Hunke.
-
+- Ported to Kotlin/Android, with a rebuilt touch UI and OpenGL ES 2.0 renderer, by rm.
+  
 ## License
 
 GNU General Public License v3 (or later) — see [LICENSE](LICENSE), matching the upstream project.
