@@ -76,11 +76,33 @@ object Geometry {
         }
     }
 
+    /** Picks wall-ring Z positions that land evenly spaced *on screen* rather than evenly spaced
+     *  in world space. A perspective camera's projected scale falls off as ~1/distance, so a
+     *  uniform world-space step compresses into a dense, uneven-looking cluster at the far end of
+     *  a well much deeper than it is wide (which this one is, looking straight down that depth
+     *  axis) — arcade Blockout references with a shallow pit don't hit this because their whole
+     *  depth range is small relative to camera distance in the first place. Spacing the rings
+     *  evenly in 1/distance (harmonic in world Z) instead reproduces that same even look
+     *  regardless of how deep the well actually is. Always includes both z=0 and z=height.
+     */
+    fun perceptuallyEvenZRings(height: Int, eyeDistanceAboveTop: Float, rungCount: Int): List<Float> {
+        if (rungCount <= 1 || height <= 0) return listOf(0f, height.toFloat())
+        val eyeZ = height + eyeDistanceAboveTop
+        val uFar = 1f / eyeZ // at z = 0, the most distant ring from the camera
+        val uNear = 1f / eyeDistanceAboveTop // at z = height, the closest ring to the camera
+        return (0..rungCount).map { i ->
+            val u = uFar + (uNear - uFar) * i / rungCount
+            (eyeZ - 1f / u).coerceIn(0f, height.toFloat())
+        }
+    }
+
     /** Builds the well's wireframe grid: a full unit grid on the floor AND all four side walls
      *  (matching the reference's gridded/textured walls, not just a floor grid with plain corner
      *  edges), as GL_LINES vertex data (no color baked in — callers set a uniform color by
-     *  drawing this list with a fixed vertex color instead). */
-    fun buildWellGridLines(width: Int, depth: Int, height: Int, color: FloatArray): FloatList {
+     *  drawing this list with a fixed vertex color instead). [zRings] are the wall's horizontal
+     *  ring positions (see [perceptuallyEvenZRings]) — the floor's own grid is unaffected, since
+     *  every one of its lines lies at the single, fixed depth z=0. */
+    fun buildWellGridLines(width: Int, depth: Int, height: Int, zRings: List<Float>, color: FloatArray): FloatList {
         val out = ArrayList<Float>()
         fun line(x0: Float, y0: Float, z0: Float, x1: Float, y1: Float, z1: Float) {
             out.add(x0); out.add(y0); out.add(z0); out.add(color[0]); out.add(color[1]); out.add(color[2]); out.add(color[3])
@@ -90,23 +112,15 @@ object Geometry {
         for (x in 0..width) line(x.toFloat(), 0f, 0f, x.toFloat(), depth.toFloat(), 0f)
         for (y in 0..depth) line(0f, y.toFloat(), 0f, width.toFloat(), y.toFloat(), 0f)
 
-        // Wall rings along z: a well is much taller than it is wide, and the camera looks straight
-        // down that same axis, so one ring per height unit perspective-compresses into a dense,
-        // uneven-looking cluster near the far end. Capping the ring count keeps wall rungs roughly
-        // as visually even as the floor's own grid, regardless of how deep the well is.
-        val maxRungs = 6
-        val zStep = maxOf(1, (height + maxRungs - 1) / maxRungs)
-        val zRings = (0..height step zStep).toMutableList().also { if (it.last() != height) it.add(height) }
-
         // Front/back walls (y = 0 and y = depth): a unit grid over x, ringed over z.
         for (y in intArrayOf(0, depth)) {
             for (x in 0..width) line(x.toFloat(), y.toFloat(), 0f, x.toFloat(), y.toFloat(), height.toFloat())
-            for (z in zRings) line(0f, y.toFloat(), z.toFloat(), width.toFloat(), y.toFloat(), z.toFloat())
+            for (z in zRings) line(0f, y.toFloat(), z, width.toFloat(), y.toFloat(), z)
         }
         // Left/right walls (x = 0 and x = width): a unit grid over y, ringed over z.
         for (x in intArrayOf(0, width)) {
             for (y in 0..depth) line(x.toFloat(), y.toFloat(), 0f, x.toFloat(), y.toFloat(), height.toFloat())
-            for (z in zRings) line(x.toFloat(), 0f, z.toFloat(), x.toFloat(), depth.toFloat(), z.toFloat())
+            for (z in zRings) line(x.toFloat(), 0f, z, x.toFloat(), depth.toFloat(), z)
         }
         return out
     }
