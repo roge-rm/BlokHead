@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +27,11 @@ private val CELL = 48.dp
 private val GAP = 6.dp
 
 /** Move/rotate/drop controls, standing in for the original's keyboard scheme in control.c:
- *  arrow keys -> move (X/Y), Q/A W/S D/E -> rotate (X/Y/Z, +/-), space -> hard drop. */
+ *  arrow keys -> move (X/Y), Q/A W/S D/E -> rotate (X/Y/Z, +/-), space -> hard drop. Two
+ *  corner-anchored clusters (move d-pad left, rotate cluster right) rather than three separate
+ *  groups with a dedicated drop button in the dead zone between them — hard drop instead lives
+ *  in the d-pad's own previously-unused center cell, since it's the same thumb doing the moving
+ *  and dropping. */
 @Composable
 fun GameControls(
     onMove: (axis: Int, sign: Int) -> Unit,
@@ -37,21 +42,27 @@ fun GameControls(
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        MoveDPad(onMove)
-        DropButton(onHardDrop)
+        MoveDPad(onMove, onHardDrop)
         RotateCluster(onRotate)
     }
 }
 
 @Composable
-private fun MoveDPad(onMove: (axis: Int, sign: Int) -> Unit) {
+private fun MoveDPad(onMove: (axis: Int, sign: Int) -> Unit, onHardDrop: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         RoundButton("▲") { onMove(Axis.Y, 1) }
         Row(horizontalArrangement = Arrangement.spacedBy(GAP)) {
             RoundButton("◀") { onMove(Axis.X, -1) }
-            BlankCell()
+            RoundButton(
+                "⏬",
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                ),
+                onClick = onHardDrop,
+            )
             RoundButton("▶") { onMove(Axis.X, 1) }
         }
         RoundButton("▼") { onMove(Axis.Y, -1) }
@@ -91,23 +102,16 @@ private fun RotateCluster(onRotate: (axis: Int, sign: Int) -> Unit) {
 }
 
 @Composable
-private fun DropButton(onHardDrop: () -> Unit) {
-    FilledTonalButton(
-        onClick = onHardDrop,
-        colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        ),
-    ) {
-        Text("DROP")
-    }
-}
-
-@Composable
-private fun RoundButton(label: String, size: Dp = CELL, onClick: () -> Unit) {
+private fun RoundButton(
+    label: String,
+    size: Dp = CELL,
+    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
+    onClick: () -> Unit,
+) {
     FilledTonalButton(
         onClick = onClick,
         shape = CircleShape,
+        colors = colors,
         contentPadding = PaddingValues(0.dp),
         modifier = Modifier.size(size),
     ) {

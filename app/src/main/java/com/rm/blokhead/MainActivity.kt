@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -136,10 +137,12 @@ private fun GameScreen(sessionId: Int, highScoreStore: HighScoreStore, onExitToM
             },
             onRotate = { axis, sign -> surfaceView.enqueue { rotate(axis, sign) } },
             onHardDrop = { surfaceView.enqueue { hardDrop() } },
+            // Two-handed portrait grip rests thumbs roughly a third of the way up from the
+            // bottom, not flush against the edge — bias 1f is the bottom edge, 0f is center.
             modifier = Modifier
-                .align(Alignment.BottomCenter)
+                .align(BiasAlignment(horizontalBias = 0f, verticalBias = 1f / 3f))
                 .navigationBarsPadding()
-                .padding(horizontal = 4.dp, vertical = 16.dp),
+                .padding(horizontal = 4.dp),
         )
 
         if (hud.isGameOver) {
