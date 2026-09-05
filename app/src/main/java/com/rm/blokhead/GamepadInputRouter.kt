@@ -2,6 +2,7 @@ package com.rm.blokhead
 
 import android.view.InputDevice
 import android.view.KeyEvent
+import com.rm.blokhead.ui.GamepadFocusVisibility
 
 /**
  * Bridges gamepad [KeyEvent]s captured at the Activity level ([MainActivity.dispatchKeyEvent])
@@ -38,6 +39,7 @@ class GamepadInputRouter {
      */
     fun handle(event: KeyEvent): Boolean? {
         if (event.action != KeyEvent.ACTION_DOWN || !isGamepadEvent(event)) return null
+        GamepadFocusVisibility.markInputReceived()
         captureHandler?.let {
             it(event.keyCode)
             return true

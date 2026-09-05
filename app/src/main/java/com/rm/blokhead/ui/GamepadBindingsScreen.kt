@@ -152,7 +152,7 @@ private fun BindingRow(
                 if (isListening) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
             )
             .clickable(onClick = onClick)
-            .gamepadFocusable(onActivate = onClick)
+            .gamepadFocusable(shape = RoundedCornerShape(8.dp), onActivate = onClick)
             .padding(vertical = 2.dp, horizontal = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
