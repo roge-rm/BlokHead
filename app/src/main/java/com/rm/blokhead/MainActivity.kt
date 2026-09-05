@@ -317,13 +317,18 @@ private fun GameScreen(
     // reads showExitConfirm/hud/gamepadBindings live on every call (Compose state read by
     // reference, not captured by value), so it doesn't need to be reinstalled when any of those
     // change. While a dialog/overlay is covering the game, it defers entirely to Back/Compose's
-    // own key handling instead of acting on the piece underneath.
+    // own key handling instead of acting on the piece underneath — including while merely paused
+    // (not just mid-dialog/game-over): every rotate/move button is a no-op against a frozen piece
+    // anyway, and since the default bindings now put two rotations on the same A/B buttons the
+    // paused overlay's own "Menu" button listens for as Confirm, resolving anything but Pause
+    // itself here would silently eat that press before it ever reached Compose's focus handling.
     DisposableEffect(sessionId) {
         gamepadRouter.gameplayHandler = { event ->
             val action = if (showExitConfirm || hud.isGameOver) {
                 null
             } else {
                 resolveGamepadAction(event.keyCode, gamepadBindings.keyCodes)
+                    ?.takeIf { !hud.isPaused || it == GamepadAction.Pause }
             }
             when (action) {
                 GamepadAction.MoveLeft -> { sfx.playMove(); surfaceView.enqueue { moveLeft() } }
