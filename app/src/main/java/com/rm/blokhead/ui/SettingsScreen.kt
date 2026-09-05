@@ -88,62 +88,75 @@ fun SettingsScreen(
         HorizontalDivider(modifier = Modifier.padding(top = 24.dp), color = MaterialTheme.colorScheme.outlineVariant)
         GroupHeader("Controls")
         SwitchRow(
-            title = "Diagonal D-Pad Corners",
-            subtitle = "Adds diagonal move buttons to the move d-pad's empty corners",
-            checked = settings.diagonalButtonsEnabled,
-            onCheckedChange = { onSettingsChange(settings.copy(diagonalButtonsEnabled = it)) },
+            title = "Touch Gestures",
+            subtitle = "Replaces the on-screen buttons with direct gestures on the grid: drag to " +
+                "move, two-finger drag/twist to rotate, tap to pause, long-press to hard drop",
+            checked = settings.gestureControlsEnabled,
+            onCheckedChange = { onSettingsChange(settings.copy(gestureControlsEnabled = it)) },
         )
-        SwitchRow(
-            title = "Left-Handed Mode",
-            subtitle = "Swaps the move and rotate control clusters to opposite sides",
-            checked = settings.leftHandedMode,
-            onCheckedChange = { onSettingsChange(settings.copy(leftHandedMode = it)) },
-        )
-        // Portrait/landscape each get their own Height and Edge Inset knobs (see Settings.kt's
-        // doc comments for what 0f/1f mean for each), but full-width sliders for all four would
-        // make this screen feel busy — paired side by side instead, half-width each.
-        DualPercentSliderRow(
-            title = "Button Height",
-            leftLabel = "Portrait",
-            leftValue = settings.portraitButtonHeight,
-            leftRange = 0f..1f,
-            onLeftChange = { onSettingsChange(settings.copy(portraitButtonHeight = it)) },
-            rightLabel = "Landscape",
-            rightValue = settings.landscapeButtonHeight,
-            rightRange = 0f..1f,
-            onRightChange = { onSettingsChange(settings.copy(landscapeButtonHeight = it)) },
-        )
-        DualPercentSliderRow(
-            title = "Button Edge Inset",
-            // Wide enough range to clear a camera cutout or gesture-nav area of practically any
-            // real size without needing a cap tied to Button Scale the way Height's is.
-            leftLabel = "Portrait",
-            leftValue = settings.portraitButtonInset,
-            leftRange = 0f..2f,
-            onLeftChange = { onSettingsChange(settings.copy(portraitButtonInset = it)) },
-            rightLabel = "Landscape",
-            rightValue = settings.landscapeButtonInset,
-            rightRange = 0f..2f,
-            onRightChange = { onSettingsChange(settings.copy(landscapeButtonInset = it)) },
-        )
-        PercentSliderRow(
-            title = "Button Scale",
-            // Each control cluster is a fixed ~156.dp-wide 3-column grid of true circles (see
-            // GameControls.kt's requiredSize use — buttons never squish to fit, so on a ~360.dp-
-            // wide phone both clusters combined only have room up to about 112% before the
-            // rightmost column would clip off the edge). Capped at 110% for a safety margin.
-            value = settings.buttonScale,
-            range = 0.7f..1.1f,
-            onValueChange = { onSettingsChange(settings.copy(buttonScale = it)) },
-        )
-        PercentSliderRow(
-            title = "Button Opacity",
-            value = settings.buttonOpacity,
-            // Floored above 0 so the buttons never fade all the way to invisible/untappable-by-
-            // sight — they'd still technically receive taps, but there'd be nothing to tap on.
-            range = 0.2f..1f,
-            onValueChange = { onSettingsChange(settings.copy(buttonOpacity = it)) },
-        )
+        // Every setting below only affects the on-screen button layout, so none of them do
+        // anything once gestures have replaced it — hidden rather than merely disabled, to keep
+        // this screen from showing a pile of dead controls.
+        if (!settings.gestureControlsEnabled) {
+            SwitchRow(
+                title = "Diagonal D-Pad Corners",
+                subtitle = "Adds diagonal move buttons to the move d-pad's empty corners",
+                checked = settings.diagonalButtonsEnabled,
+                onCheckedChange = { onSettingsChange(settings.copy(diagonalButtonsEnabled = it)) },
+            )
+            SwitchRow(
+                title = "Left-Handed Mode",
+                subtitle = "Swaps the move and rotate control clusters to opposite sides",
+                checked = settings.leftHandedMode,
+                onCheckedChange = { onSettingsChange(settings.copy(leftHandedMode = it)) },
+            )
+            // Portrait/landscape each get their own Height and Edge Inset knobs (see Settings.kt's
+            // doc comments for what 0f/1f mean for each), but full-width sliders for all four
+            // would make this screen feel busy — paired side by side instead, half-width each.
+            DualPercentSliderRow(
+                title = "Button Height",
+                leftLabel = "Portrait",
+                leftValue = settings.portraitButtonHeight,
+                leftRange = 0f..1f,
+                onLeftChange = { onSettingsChange(settings.copy(portraitButtonHeight = it)) },
+                rightLabel = "Landscape",
+                rightValue = settings.landscapeButtonHeight,
+                rightRange = 0f..1f,
+                onRightChange = { onSettingsChange(settings.copy(landscapeButtonHeight = it)) },
+            )
+            DualPercentSliderRow(
+                title = "Button Edge Inset",
+                // Wide enough range to clear a camera cutout or gesture-nav area of practically
+                // any real size without needing a cap tied to Button Scale the way Height's is.
+                leftLabel = "Portrait",
+                leftValue = settings.portraitButtonInset,
+                leftRange = 0f..2f,
+                onLeftChange = { onSettingsChange(settings.copy(portraitButtonInset = it)) },
+                rightLabel = "Landscape",
+                rightValue = settings.landscapeButtonInset,
+                rightRange = 0f..2f,
+                onRightChange = { onSettingsChange(settings.copy(landscapeButtonInset = it)) },
+            )
+            PercentSliderRow(
+                title = "Button Scale",
+                // Each control cluster is a fixed ~156.dp-wide 3-column grid of true circles (see
+                // GameControls.kt's requiredSize use — buttons never squish to fit, so on a
+                // ~360.dp-wide phone both clusters combined only have room up to about 112%
+                // before the rightmost column would clip off the edge). Capped at 110% for a
+                // safety margin.
+                value = settings.buttonScale,
+                range = 0.7f..1.1f,
+                onValueChange = { onSettingsChange(settings.copy(buttonScale = it)) },
+            )
+            PercentSliderRow(
+                title = "Button Opacity",
+                value = settings.buttonOpacity,
+                // Floored above 0 so the buttons never fade all the way to invisible/untappable-
+                // by-sight — they'd still technically receive taps, but there'd be nothing to tap.
+                range = 0.2f..1f,
+                onValueChange = { onSettingsChange(settings.copy(buttonOpacity = it)) },
+            )
+        }
         OutlinedButton(
             onClick = onShowGamepadBindings,
             modifier = Modifier
