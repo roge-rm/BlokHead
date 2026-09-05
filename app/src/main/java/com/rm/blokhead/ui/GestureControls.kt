@@ -16,11 +16,11 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Each in-game rotate step turns the piece a quarter turn — so a two-finger *twist* fires one
- *  rotate per 90° the fingers themselves have physically twisted, the same direct real-world
- *  correspondence [gestureControls]' `cellSize` gives one-finger move: twist your fingers a
- *  quarter turn, the piece turns a quarter turn, at whatever speed you actually twisted at. */
-private const val ROTATE_TWIST_STEP_DEGREES = 90f
+/** Each in-game rotate step turns the piece a quarter turn (90°), but requiring the fingers to
+ *  physically twist that same full 90° turned out to feel like too much hand movement — a real
+ *  twist gesture's comfortable range tops out well short of a literal quarter turn, so this is
+ *  deliberately a bit less than 90° instead of a strict 1:1 match. */
+private const val ROTATE_TWIST_STEP_DEGREES = 70f
 
 /** Two-finger *pan* (translation, not twist) fires X/Y rotates instead of Z — there's no rotation
  *  angle to match 1:1 here since panning isn't a rotation gesture, so it reuses the same
