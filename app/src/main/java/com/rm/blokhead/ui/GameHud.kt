@@ -81,7 +81,9 @@ fun PausedOverlay(onMenuClick: () -> Unit, modifier: Modifier = Modifier) {
             )
             OutlinedButton(
                 onClick = onMenuClick,
-                modifier = Modifier.padding(top = 24.dp),
+                modifier = Modifier
+                    .padding(top = 24.dp)
+                    .gamepadFocusable(onActivate = onMenuClick),
             ) {
                 Text("Menu")
             }
@@ -125,12 +127,14 @@ fun GameOverOverlay(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
             )
-            Button(onClick = onPlayAgain) {
+            Button(onClick = onPlayAgain, modifier = Modifier.gamepadFocusable(onActivate = onPlayAgain)) {
                 Text("Play Again")
             }
             OutlinedButton(
                 onClick = onMainMenu,
-                modifier = Modifier.padding(top = 12.dp),
+                modifier = Modifier
+                    .padding(top = 12.dp)
+                    .gamepadFocusable(onActivate = onMainMenu),
             ) {
                 Text("Main Menu")
             }

@@ -10,8 +10,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 
 /** The title screen, standing in for the original's initial menu.c state before startGame(). */
@@ -22,6 +26,9 @@ fun MenuScreen(
     onShowSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val startGameFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { startGameFocus.requestFocus() }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -40,14 +47,21 @@ fun MenuScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp, bottom = 48.dp),
         )
-        Button(onClick = onStartGame, modifier = Modifier.fillMaxWidth(0.7f)) {
+        Button(
+            onClick = onStartGame,
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .focusRequester(startGameFocus)
+                .gamepadFocusable(onActivate = onStartGame),
+        ) {
             Text("Start Game")
         }
         OutlinedButton(
             onClick = onShowHighScores,
             modifier = Modifier
                 .fillMaxWidth(0.7f)
-                .padding(top = 12.dp),
+                .padding(top = 12.dp)
+                .gamepadFocusable(onActivate = onShowHighScores),
         ) {
             Text("High Scores")
         }
@@ -55,7 +69,8 @@ fun MenuScreen(
             onClick = onShowSettings,
             modifier = Modifier
                 .fillMaxWidth(0.7f)
-                .padding(top = 12.dp),
+                .padding(top = 12.dp)
+                .gamepadFocusable(onActivate = onShowSettings),
         ) {
             Text("Settings")
         }

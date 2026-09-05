@@ -28,7 +28,13 @@ import kotlin.math.roundToInt
 /** Settings screen — new, standing in for nothing in the original beyond a couple of hardcoded
  *  compile-time globals it never exposed as an in-game menu. */
 @Composable
-fun SettingsScreen(settings: Settings, onSettingsChange: (Settings) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
+fun SettingsScreen(
+    settings: Settings,
+    onSettingsChange: (Settings) -> Unit,
+    onBack: () -> Unit,
+    onShowGamepadBindings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -109,7 +115,20 @@ fun SettingsScreen(settings: Settings, onSettingsChange: (Settings) -> Unit, onB
             BlockSetChip("All", BlockSet.ALL, settings, onSettingsChange)
         }
 
-        OutlinedButton(onClick = onBack, modifier = Modifier.padding(top = 32.dp)) {
+        OutlinedButton(
+            onClick = onShowGamepadBindings,
+            modifier = Modifier
+                .padding(top = 32.dp)
+                .gamepadFocusable(onActivate = onShowGamepadBindings),
+        ) {
+            Text("Controller")
+        }
+        OutlinedButton(
+            onClick = onBack,
+            modifier = Modifier
+                .padding(top = 12.dp)
+                .gamepadFocusable(onActivate = onBack),
+        ) {
             Text("Back")
         }
     }
