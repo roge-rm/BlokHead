@@ -4,12 +4,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,8 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -116,34 +116,38 @@ private fun GameScreen(sessionId: Int, highScoreStore: HighScoreStore, onExitToM
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         AndroidView(modifier = Modifier.fillMaxSize(), factory = { surfaceView })
 
-        GameHud(
-            snapshot = hud,
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding(),
-        )
+        GameHud(snapshot = hud, modifier = Modifier.fillMaxWidth())
 
-        GameControls(
-            onMove = { axis, sign ->
-                surfaceView.enqueue {
-                    when (axis) {
-                        Axis.X -> if (sign < 0) moveLeft() else moveRight()
-                        else -> if (sign < 0) moveBackward() else moveForward()
+        // BlokoutRenderer's camera solves the vertical FOV so the well's near opening exactly
+        // fills the viewport width; since the well is square (width == depth), that makes the
+        // opening's projected height a fixed `aspect` fraction of the screen height, centered —
+        // i.e. the rendered grid occupies the vertical band [0.5 - aspect/2, 0.5 + aspect/2].
+        // Placing the controls right after that bottom edge (plus a small gap) keeps them just
+        // clear of the grid regardless of screen size, rather than at a fixed guessed position.
+        val containerHeight = maxHeight
+        val aspect = maxWidth.value / maxHeight.value
+        val gridBottomFraction = 0.5f + aspect / 2f
+        Column(modifier = Modifier.fillMaxSize()) {
+            Spacer(Modifier.height(containerHeight * gridBottomFraction + 12.dp))
+            GameControls(
+                onMove = { axis, sign ->
+                    surfaceView.enqueue {
+                        when (axis) {
+                            Axis.X -> if (sign < 0) moveLeft() else moveRight()
+                            else -> if (sign < 0) moveBackward() else moveForward()
+                        }
                     }
-                }
-            },
-            onRotate = { axis, sign -> surfaceView.enqueue { rotate(axis, sign) } },
-            onHardDrop = { surfaceView.enqueue { hardDrop() } },
-            // Two-handed portrait grip rests thumbs roughly a third of the way up from the
-            // bottom, not flush against the edge — bias 1f is the bottom edge, 0f is center.
-            modifier = Modifier
-                .align(BiasAlignment(horizontalBias = 0f, verticalBias = 1f / 3f))
-                .navigationBarsPadding()
-                .padding(horizontal = 4.dp),
-        )
+                },
+                onRotate = { axis, sign -> surfaceView.enqueue { rotate(axis, sign) } },
+                onHardDrop = { surfaceView.enqueue { hardDrop() } },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+            )
+        }
 
         if (hud.isGameOver) {
             if (highScoreQualified == true) {
