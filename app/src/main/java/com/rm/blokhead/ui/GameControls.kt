@@ -49,40 +49,35 @@ private fun MoveDPad(onMove: (axis: Int, sign: Int) -> Unit) {
     }
 }
 
-/** Rotate cluster laid out as a 3x3 grid: X/Y sit where a D-pad would put left/right/up/down,
- *  and the two Z rotations fill the opposite diagonal corners.
+/** Rotate cluster laid out as a 3x3 grid, sized and spaced to mirror [MoveDPad] exactly (same
+ *  button size, same middle-row height) — X sits where the D-pad puts up/down, Y where it puts
+ *  left/right, and the two Z rotations fill the opposite diagonal corners.
  *
  *  ```
- *      Y+ Z+
- *  X-      X+
- *  Z- Y-
+ *      X+ Z+
+ *  Y-      Y+
+ *  Z- X-
  *  ```
  */
 @Composable
 private fun RotateCluster(onRotate: (axis: Int, sign: Int) -> Unit) {
-    val cell = 40.dp
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RotateSpacer(cell)
-            RoundButton("Y+", size = cell) { onRotate(Axis.Y, 1) }
-            RoundButton("Z+", size = cell) { onRotate(Axis.Z, 1) }
+            Spacer()
+            RoundButton("X+") { onRotate(Axis.X, 1) }
+            RoundButton("Z+") { onRotate(Axis.Z, 1) }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RoundButton("X−", size = cell) { onRotate(Axis.X, -1) }
-            RotateSpacer(cell)
-            RoundButton("X+", size = cell) { onRotate(Axis.X, 1) }
+            RoundButton("Y−") { onRotate(Axis.Y, -1) }
+            Spacer()
+            RoundButton("Y+") { onRotate(Axis.Y, 1) }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RoundButton("Z−", size = cell) { onRotate(Axis.Z, -1) }
-            RoundButton("Y−", size = cell) { onRotate(Axis.Y, -1) }
-            RotateSpacer(cell)
+            RoundButton("Z−") { onRotate(Axis.Z, -1) }
+            RoundButton("X−") { onRotate(Axis.X, -1) }
+            Spacer()
         }
     }
-}
-
-@Composable
-private fun RotateSpacer(size: androidx.compose.ui.unit.Dp) {
-    androidx.compose.foundation.layout.Spacer(Modifier.size(size))
 }
 
 @Composable
