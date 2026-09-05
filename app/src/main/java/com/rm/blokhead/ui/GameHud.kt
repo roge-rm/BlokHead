@@ -91,9 +91,13 @@ fun PausedOverlay(onMenuClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
+/** One SCORE/LEVEL/CUBES readout — public (not `private`, unlike [GameHud]'s other internals) so
+ *  the landscape layout in MainActivity.kt can lay these out itself in the side margins instead
+ *  of via [GameHud]'s single horizontal bar, which there would otherwise eat into the grid's
+ *  full-height budget. */
 @Composable
-private fun HudStat(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun HudStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(text = value, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
     }
