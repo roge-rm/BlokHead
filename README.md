@@ -11,7 +11,7 @@ The game mechanics started as a direct port but have been modified to make the g
 
 - Blocks fall and move in 3 dimensions and can be rotated around the X, Y, and Z axis.
 - Choose between three piece sets - flat, extended, and the full original set from Blokout
-- Touch button controls with hardware controller support (WIP)
+- On screen buttons, gesture controls, and support for Bluetooth and USB controllers
 - Classic-style layer flash on layer clear
 - Tap the top section of the screen to pause/exit the game
 - Persistent high score table
