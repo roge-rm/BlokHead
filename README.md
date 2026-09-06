@@ -1,9 +1,10 @@
 # BlokHead
 
-BlokHead is a native Android port of [Blokout](https://jlehtinen.net/blokout/), itself an open source clone
-of the classic game Blockout. 
+BlokHead is a native Android port of [Blokout](https://jlehtinen.net/blokout/), itself an open source clone of the classic game Blockout. 
 
-The game mechanics started as a direct port but have been modified to make the game more customizable.
+The game mechanics started as a direct port but have been modified to make the game more customizable and faster playing. You can chooe between on screen buttons, gesture controls, or using an external controller. It has not been extensively tested on different shaped devices so there may be UI issues on some devices - please report if you come across any.
+
+Cheers.
 
 <img src="docs/screenshot-menu.png" alt="BlokHead's main menu: title, Start Game, High Scores, and Settings" width="200" /> <img src="docs/screenshot-gameplay.png" alt="BlokHead mid-game: a partially built stack of colored cubes in the 3D well, with the move d-pad and rotate cluster below" width="200" /> <img src="docs/screenshot-settings.png" alt="BlokHead's settings screen: diagonal d-pad corners, left-handed mode, sound, starting difficulty, well size, button position and opacity, and block set" width="200" /> <img src="docs/screenshot-pause.png" alt="BlokHead's pause screen with its Menu button pressed, showing a Quit to Menu confirmation dialog" width="200" />
 
@@ -35,8 +36,6 @@ The game mechanics started as a direct port but have been modified to make the g
 The game-logic port (`game/`) is pure Kotlin with no Android dependency, so its unit tests run on
 the JVM without an emulator — that's where the well/collision/scoring behavior is verified against
 the original's logic as it's translated over.
-
-This project targets a GitHub release only; there's no Play Store listing.
 
 ## Architecture
 
