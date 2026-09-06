@@ -13,7 +13,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 import kotlin.math.atan
-import kotlin.math.roundToInt
 import kotlin.math.tan
 
 /**
@@ -174,13 +173,7 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
     private fun drawWellGrid() {
         val tube = engine.tube
         val height = wellTop(tube)
-        // More rings for a taller well: perceptuallyEvenZRings deliberately spaces however many
-        // rings it's given evenly *on screen*, which otherwise makes a well look identical
-        // regardless of its actual depth — a taller well needs visibly more of them (a denser
-        // ladder of rungs), not just the same 6 stretched differently, for the height setting to
-        // read as an obvious difference rather than a number with no visual effect.
-        val rungCount = (height / 2.5f).roundToInt().coerceIn(4, 10)
-        val zRings = Geometry.perceptuallyEvenZRings(height.toInt(), standoffAboveTop, rungCount)
+        val zRings = Geometry.evenLayerZRings(height.toInt())
         val lines = Geometry.buildWellGridLines(tube.dimensions[0], tube.dimensions[1], height.toInt(), zRings, wellLineColor)
         Matrix.setIdentityM(modelMatrix, 0)
         Matrix.multiplyMM(tempMatrix, 0, viewMatrix, 0, modelMatrix, 0)

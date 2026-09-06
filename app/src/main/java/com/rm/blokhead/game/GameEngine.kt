@@ -26,6 +26,13 @@ class GameEngine(
     private val height: Int = 16,
     private val random: Random = Random.Default,
 ) {
+    companion object {
+        /** Layers of headroom required above the stack to safely spawn the next piece — the
+         *  tallest piece is 2 layers tall, so game-over triggers once fewer than this many
+         *  layers remain below [Tube.dimensions]'s top. */
+        private const val SPAWN_CLEARANCE_LAYERS = 0
+    }
+
     var tube: Tube = Tube(width, depth, height)
         private set
 
@@ -187,8 +194,12 @@ class GameEngine(
         // but that would double the score bonus along with it if used here directly — halved
         // back to its original contribution so only the fall itself got faster, not the score.
         val scoringFallSpeed = if (lockedBlock.wasHardDropped) lockedBlock.fallSpeed / 2f else lockedBlock.fallSpeed
+        // Coerced to at least 1: a lock that fills the tube's topmost layer makes this hit zero
+        // (or, with less spawn clearance than layers cleared, go negative), which would blow the
+        // score up to infinity/NaN instead of just giving the max height bonus.
+        val heightBonusDivisor = (tube.dimensions[2] - postClearHeight).coerceAtLeast(1)
         val moveScore = (levelFactor * timeNow * 200 * 2.0.pow(completedLayers.size) * scoringFallSpeed) /
-            (tube.dimensions[2] - postClearHeight)
+            heightBonusDivisor
         score += (moveScore + 0.5).toInt()
 
         if (completedLayers.isEmpty()) {
@@ -207,7 +218,7 @@ class GameEngine(
     }
 
     private fun advanceAfterLock() {
-        if (tube.height < tube.dimensions[2] - 5) {
+        if (tube.height < tube.dimensions[2] - SPAWN_CLEARANCE_LAYERS) {
             spawnBlock()
         } else {
             isGameOver = true
