@@ -62,11 +62,16 @@ class Tube(x: Int, y: Int, height: Int) {
 
         for (pz in 0 until blockDim[2]) for (py in 0 until blockDim[1]) for (px in 0 until blockDim[0]) {
             if (block.cubeAt(intArrayOf(px, py, pz))) {
-                cubes[index(
-                    block.targetPosition[0] + px - blockCenter[0],
-                    block.targetPosition[1] + py - blockCenter[1],
-                    blockZ + pz - blockCenter[2],
-                )] = 1
+                val x = block.targetPosition[0] + px - blockCenter[0]
+                val y = block.targetPosition[1] + py - blockCenter[1]
+                val z = blockZ + pz - blockCenter[2]
+                // A cube can land above dimensions[2] when little/no spawn clearance is left
+                // above the stack (see GameEngine.SPAWN_CLEARANCE_LAYERS) — same out-of-range-is-
+                // untracked treatment isFilled already gives reads, since there's no array slot
+                // to record it in (and nothing above the array is ever rendered anyway).
+                if (x in 0 until dimensions[0] && y in 0 until dimensions[1] && z in 0 until dimensions[2]) {
+                    cubes[index(x, y, z)] = 1
+                }
             }
         }
 

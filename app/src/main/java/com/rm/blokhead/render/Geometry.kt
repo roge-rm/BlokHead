@@ -76,24 +76,20 @@ object Geometry {
         }
     }
 
-    /** Picks wall-ring Z positions that land evenly spaced *on screen* rather than evenly spaced
-     *  in world space. A perspective camera's projected scale falls off as ~1/distance, so a
-     *  uniform world-space step compresses into a dense, uneven-looking cluster at the far end of
-     *  a well much deeper than it is wide (which this one is, looking straight down that depth
-     *  axis) — arcade Blockout references with a shallow pit don't hit this because their whole
-     *  depth range is small relative to camera distance in the first place. Spacing the rings
-     *  evenly in 1/distance (harmonic in world Z) instead reproduces that same even look
-     *  regardless of how deep the well actually is. Always includes both z=0 and z=height.
+    /** Picks wall-ring Z positions that land exactly on layer boundaries (every integer Z is one
+     *  dropped-block layer), spaced a constant [2, 5] layers apart so a ring always coincides with
+     *  where a block can actually stop, instead of the arbitrary in-between heights a purely
+     *  screen-even spacing would pick. The step is chosen from the well's height so the ring count
+     *  stays in the same dense-but-not-cluttered range regardless of how deep the well is. Always
+     *  includes both z=0 and z=height (the latter possibly closer than [step] to its neighbor, if
+     *  height isn't a multiple of it).
      */
-    fun perceptuallyEvenZRings(height: Int, eyeDistanceAboveTop: Float, rungCount: Int): List<Float> {
-        if (rungCount <= 1 || height <= 0) return listOf(0f, height.toFloat())
-        val eyeZ = height + eyeDistanceAboveTop
-        val uFar = 1f / eyeZ // at z = 0, the most distant ring from the camera
-        val uNear = 1f / eyeDistanceAboveTop // at z = height, the closest ring to the camera
-        return (0..rungCount).map { i ->
-            val u = uFar + (uNear - uFar) * i / rungCount
-            (eyeZ - 1f / u).coerceIn(0f, height.toFloat())
-        }
+    fun evenLayerZRings(height: Int): List<Float> {
+        if (height <= 0) return listOf(0f)
+        val step = (2..5).firstOrNull { height / it <= 10 } ?: 5
+        val rings = (0..height step step).map { it.toFloat() }.toMutableList()
+        if (rings.last() != height.toFloat()) rings.add(height.toFloat())
+        return rings
     }
 
     /** Builds the well's wireframe grid: a full unit grid on the floor AND all four side walls
