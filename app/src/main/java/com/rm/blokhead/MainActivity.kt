@@ -413,9 +413,9 @@ private fun GameScreen(
             // dead space top or bottom — landscape has width to spare for this, unlike portrait.
             val edgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.landscapeButtonInset
             val clusterSize = LANDSCAPE_CLUSTER_SIZE * settings.buttonScale
-            // No clusters to clear in gesture mode — the grid can claim the full square instead
-            // of leaving the side margins dead.
-            val clusterClearance = if (settings.gestureControlsEnabled) 0.dp else (clusterSize + edgeInset + 8.dp) * 2
+            // No clusters to clear once buttons are hidden — the grid can claim the full square
+            // instead of leaving the side margins dead.
+            val clusterClearance = if (!settings.onScreenButtonsEnabled) 0.dp else (clusterSize + edgeInset + 8.dp) * 2
             val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
             // 0f = top, 1f = bottom, 0.5f = centered (landscape's original fixed behavior, and
@@ -494,7 +494,7 @@ private fun GameScreen(
                 HudStat("LEVEL", hud.level.toString())
                 HudStat("CUBES", hud.cubesDropped.toString(), modifier = Modifier.padding(top = 8.dp))
             }
-            if (!settings.gestureControlsEnabled) {
+            if (settings.onScreenButtonsEnabled) {
                 if (settings.leftHandedMode) {
                     RotateCluster(onRotate = onRotateAction, modifier = leftModifier, scale = settings.buttonScale)
                     MoveDPad(
@@ -578,7 +578,7 @@ private fun GameScreen(
                 )
             }
 
-            if (!settings.gestureControlsEnabled) {
+            if (settings.onScreenButtonsEnabled) {
                 // Default position is right after the grid's bottom edge (plus a small gap),
                 // which keeps controls just clear of it regardless of screen size; the "Button
                 // Height" setting slides that down towards the bottom edge instead of a fixed
