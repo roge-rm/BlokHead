@@ -2,7 +2,7 @@
 
 BlokHead is a native Android port of [Blokout](https://jlehtinen.net/blokout/), itself an open source clone of the classic game Blockout. 
 
-The game mechanics started as a direct port but have been modified to make the game more customizable and faster playing. You can chooe between on screen buttons, gesture controls, or using an external controller. It has not been extensively tested on different shaped devices so there may be UI issues on some devices - please report if you come across any.
+The game mechanics started as a direct port but have been modified to make the game more customizable and faster playing. You can choose between on screen buttons, gesture controls, or using an external controller. It has not been extensively tested on different shaped devices so there may be UI issues on some devices - please report if you come across any.
 
 Cheers.
 
