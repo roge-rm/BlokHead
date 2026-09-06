@@ -17,12 +17,16 @@ private val Context.settingsDataStore by preferencesDataStore(name = "settings")
  *  menu, just a couple of hardcoded globals (solidBlocks, backgroundColor) set at compile time. */
 data class Settings(
     val diagonalButtonsEnabled: Boolean = false,
-    /** When on, the on-screen D-pad/rotate-cluster buttons are replaced by direct touch gestures
-     *  on the grid itself (drag to move, two-finger pan/twist to rotate, tap to pause, double-tap
-     *  to hard drop) — see [com.rm.blokhead.ui.gestureControls]. Off by default so existing
-     *  installs see no behavior change; every other Controls setting below is button-scheme-only
-     *  and has no effect while this is on. */
+    /** When on, direct touch gestures on the grid itself (drag to move, two-finger pan/twist to
+     *  rotate, tap to pause, double-tap to hard drop) work alongside the on-screen buttons — see
+     *  [com.rm.blokhead.ui.gestureControls]. Off by default so existing installs see no behavior
+     *  change. Independent of [onScreenButtonsEnabled]: either, both, or neither can be on. */
     val gestureControlsEnabled: Boolean = false,
+    /** When off, the on-screen D-pad/rotate-cluster buttons (and every other Controls setting
+     *  below, which is button-scheme-only) are hidden — for players who've turned on
+     *  [gestureControlsEnabled] and no longer want the buttons taking up screen space. On by
+     *  default so existing installs see no behavior change. */
+    val onScreenButtonsEnabled: Boolean = true,
     val startingDifficulty: Int = 1,
     /** Portrait only. 0f = controls sit right below the grid (default); 1f = pushed down near
      *  the bottom edge. See [landscapeButtonHeight] for landscape's equivalent knob. */
@@ -58,6 +62,7 @@ data class Settings(
 private object Keys {
     val DIAGONAL = booleanPreferencesKey("diagonal_buttons_enabled")
     val GESTURE_CONTROLS_ENABLED = booleanPreferencesKey("gesture_controls_enabled")
+    val ON_SCREEN_BUTTONS_ENABLED = booleanPreferencesKey("on_screen_buttons_enabled")
     val DIFFICULTY = intPreferencesKey("starting_difficulty")
     val PORTRAIT_BUTTON_HEIGHT = floatPreferencesKey("portrait_button_height")
     // Pre-1.2 name for PORTRAIT_BUTTON_HEIGHT, back when it was portrait's only layout knob —
@@ -83,6 +88,7 @@ class SettingsStore(private val context: Context) {
         Settings(
             diagonalButtonsEnabled = prefs[Keys.DIAGONAL] ?: defaults.diagonalButtonsEnabled,
             gestureControlsEnabled = prefs[Keys.GESTURE_CONTROLS_ENABLED] ?: defaults.gestureControlsEnabled,
+            onScreenButtonsEnabled = prefs[Keys.ON_SCREEN_BUTTONS_ENABLED] ?: defaults.onScreenButtonsEnabled,
             startingDifficulty = prefs[Keys.DIFFICULTY] ?: defaults.startingDifficulty,
             portraitButtonHeight = prefs[Keys.PORTRAIT_BUTTON_HEIGHT]
                 ?: prefs[Keys.LEGACY_BUTTON_POSITION]
@@ -105,6 +111,7 @@ class SettingsStore(private val context: Context) {
         context.settingsDataStore.edit { prefs ->
             prefs[Keys.DIAGONAL] = settings.diagonalButtonsEnabled
             prefs[Keys.GESTURE_CONTROLS_ENABLED] = settings.gestureControlsEnabled
+            prefs[Keys.ON_SCREEN_BUTTONS_ENABLED] = settings.onScreenButtonsEnabled
             prefs[Keys.DIFFICULTY] = settings.startingDifficulty
             prefs[Keys.PORTRAIT_BUTTON_HEIGHT] = settings.portraitButtonHeight
             prefs[Keys.SOUND] = settings.soundEnabled

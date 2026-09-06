@@ -89,15 +89,21 @@ fun SettingsScreen(
         GroupHeader("Controls")
         SwitchRow(
             title = "Touch Gestures",
-            subtitle = "Replaces the on-screen buttons with direct gestures on the grid: drag to " +
+            subtitle = "Adds direct gestures on the grid alongside the on-screen buttons: drag to " +
                 "move, two-finger drag/twist to rotate, tap to pause, long-press to hard drop",
             checked = settings.gestureControlsEnabled,
             onCheckedChange = { onSettingsChange(settings.copy(gestureControlsEnabled = it)) },
         )
+        SwitchRow(
+            title = "On-Screen Buttons",
+            subtitle = "Turn off once Touch Gestures covers everything you need, to free up screen space",
+            checked = settings.onScreenButtonsEnabled,
+            onCheckedChange = { onSettingsChange(settings.copy(onScreenButtonsEnabled = it)) },
+        )
         // Every setting below only affects the on-screen button layout, so none of them do
-        // anything once gestures have replaced it — hidden rather than merely disabled, to keep
+        // anything once the buttons are hidden — hidden rather than merely disabled, to keep
         // this screen from showing a pile of dead controls.
-        if (!settings.gestureControlsEnabled) {
+        if (settings.onScreenButtonsEnabled) {
             SwitchRow(
                 title = "Diagonal D-Pad Corners",
                 subtitle = "Adds diagonal move buttons to the move d-pad's empty corners",
