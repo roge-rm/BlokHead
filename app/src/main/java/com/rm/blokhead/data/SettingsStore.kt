@@ -1,6 +1,7 @@
 package com.rm.blokhead.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
@@ -57,11 +58,13 @@ data class Settings(
      *  of 0f, since landscape's clusters sit right at the screen's physical edges otherwise,
      *  where a typical camera cutout/gesture-nav area is more likely to cover them. */
     val landscapeButtonInset: Float = 1f,
-    /** Landscape only. Same range and direction as [portraitButtonHeight] — 0f = resting on the
-     *  bottom edge, 1f = vertically centered. 1f is the shipped default here rather than 0f,
-     *  because centered is what landscape's clusters have always defaulted to, going back to
-     *  before this setting existed. */
-    val landscapeButtonHeight: Float = 1f,
+    /** Landscape only. Same direction as [portraitButtonHeight] — 0f = resting on the bottom edge
+     *  — but the travel runs the whole height of the screen rather than stopping halfway, so 1f is
+     *  the top edge and 0.5f is vertically centered. Landscape's clusters sit in the pillarbox
+     *  margins beside the grid rather than over it, so a raised cluster covers no play area and
+     *  there is nothing for the range to stop short of. 0.5f is the shipped default because
+     *  centered is what these have defaulted to since before this setting existed. */
+    val landscapeButtonHeight: Float = 0.5f,
 )
 
 private object Keys {
@@ -69,10 +72,15 @@ private object Keys {
     val GESTURE_CONTROLS_ENABLED = booleanPreferencesKey("gesture_controls_enabled")
     val ON_SCREEN_BUTTONS_ENABLED = booleanPreferencesKey("on_screen_buttons_enabled")
     val DIFFICULTY = intPreferencesKey("starting_difficulty")
-    val PORTRAIT_BUTTON_HEIGHT = floatPreferencesKey("portrait_button_height")
-    // Pre-1.2 name for PORTRAIT_BUTTON_HEIGHT, back when it was portrait's only layout knob —
-    // read as a fallback so an existing install doesn't just lose the value it had saved.
-    val LEGACY_BUTTON_POSITION = floatPreferencesKey("button_vertical_position")
+    // The "_v2" keys hold Button Height under the 1.2.6 meaning of the knob (0f = bottom edge,
+    // raising it walks the cluster up). Both directions were the other way round before that, so
+    // they are new keys rather than reinterpreted old ones — a downgrade then finds its own key
+    // untouched instead of a value that means the opposite of what it expects. The pre-1.2.6
+    // portrait keys ("portrait_button_height", and "button_vertical_position" before that) are
+    // deliberately not read at all; see [Preferences.portraitButtonHeight] for why.
+    val PORTRAIT_BUTTON_HEIGHT = floatPreferencesKey("portrait_button_height_v2")
+    val LANDSCAPE_BUTTON_HEIGHT = floatPreferencesKey("landscape_button_height_v2")
+    val LEGACY_LANDSCAPE_BUTTON_HEIGHT = floatPreferencesKey("landscape_button_height")
     val SOUND = booleanPreferencesKey("sound_enabled")
     val LEFT_HANDED = booleanPreferencesKey("left_handed_mode")
     val BLOCK_SET = stringPreferencesKey("block_set")
@@ -82,8 +90,26 @@ private object Keys {
     val BUTTON_SCALE = floatPreferencesKey("button_scale")
     val PORTRAIT_BUTTON_INSET = floatPreferencesKey("portrait_button_inset")
     val LANDSCAPE_BUTTON_INSET = floatPreferencesKey("landscape_button_inset")
-    val LANDSCAPE_BUTTON_HEIGHT = floatPreferencesKey("landscape_button_height")
 }
+
+/** Reads portrait's Button Height, carrying a pre-1.2.6 value across the change in what the knob
+ *  means. Old portrait values are deliberately *dropped* rather than converted: that range ran
+ *  from the bottom of the rendered grid to the bottom of the screen, which on a phone was about
+ *  30dp of travel and on a 4:3 tablet was no travel at all (both ends landed past the bottom
+ *  edge). Every value it could hold therefore described "as low as the buttons go", which is what
+ *  the new default of 0f already is — so re-reading an old value as 1f - it, the way
+ *  [migratedLandscapeButtonHeight] legitimately can, would move buttons that were sitting at the
+ *  bottom of the screen up into the middle of the well. */
+private fun Preferences.portraitButtonHeight(default: Float): Float = this[Keys.PORTRAIT_BUTTON_HEIGHT] ?: default
+
+/** Reads landscape's Button Height, converting a pre-1.2.6 value. Landscape's old range genuinely
+ *  spanned the screen (0f = top, 1f = bottom) and the new one still does, only counting from the
+ *  other end — so the old value maps exactly onto the new one by 1f - it, and a player who had
+ *  moved these keeps the position they chose. */
+private fun Preferences.landscapeButtonHeight(default: Float): Float =
+    this[Keys.LANDSCAPE_BUTTON_HEIGHT]
+        ?: this[Keys.LEGACY_LANDSCAPE_BUTTON_HEIGHT]?.let { 1f - it }
+        ?: default
 
 /** DataStore-backed persistence for [Settings]. */
 class SettingsStore(private val context: Context) {
@@ -95,9 +121,7 @@ class SettingsStore(private val context: Context) {
             gestureControlsEnabled = prefs[Keys.GESTURE_CONTROLS_ENABLED] ?: defaults.gestureControlsEnabled,
             onScreenButtonsEnabled = prefs[Keys.ON_SCREEN_BUTTONS_ENABLED] ?: defaults.onScreenButtonsEnabled,
             startingDifficulty = prefs[Keys.DIFFICULTY] ?: defaults.startingDifficulty,
-            portraitButtonHeight = prefs[Keys.PORTRAIT_BUTTON_HEIGHT]
-                ?: prefs[Keys.LEGACY_BUTTON_POSITION]
-                ?: defaults.portraitButtonHeight,
+            portraitButtonHeight = prefs.portraitButtonHeight(defaults.portraitButtonHeight),
             soundEnabled = prefs[Keys.SOUND] ?: defaults.soundEnabled,
             leftHandedMode = prefs[Keys.LEFT_HANDED] ?: defaults.leftHandedMode,
             blockSet = prefs[Keys.BLOCK_SET]?.let { name -> runCatching { BlockSet.valueOf(name) }.getOrNull() }
@@ -108,7 +132,7 @@ class SettingsStore(private val context: Context) {
             buttonScale = prefs[Keys.BUTTON_SCALE] ?: defaults.buttonScale,
             portraitButtonInset = prefs[Keys.PORTRAIT_BUTTON_INSET] ?: defaults.portraitButtonInset,
             landscapeButtonInset = prefs[Keys.LANDSCAPE_BUTTON_INSET] ?: defaults.landscapeButtonInset,
-            landscapeButtonHeight = prefs[Keys.LANDSCAPE_BUTTON_HEIGHT] ?: defaults.landscapeButtonHeight,
+            landscapeButtonHeight = prefs.landscapeButtonHeight(defaults.landscapeButtonHeight),
         )
     }
 
