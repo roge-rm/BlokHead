@@ -547,9 +547,16 @@ private fun GameScreen(
             val clusterClearance = if (!settings.onScreenButtonsEnabled) 0.dp else (clusterSize + edgeInset + 8.dp) * 2
             val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
-            // Same Button Height range as the other two layouts (see [clusterTopFor]) — expressed
-            // as an offset from center, since the clusters are aligned CenterStart/CenterEnd.
-            val clusterTop = clusterTopFor(maxHeight, clusterSize, bottomInset, settings.landscapeButtonHeight)
+            // Button Height spans the whole screen here, unlike the other two layouts (see
+            // [clusterTopFor]) — expressed as an offset from center, since the clusters are
+            // aligned CenterStart/CenterEnd.
+            val clusterTop = clusterTopFor(
+                maxHeight,
+                clusterSize,
+                bottomInset,
+                settings.landscapeButtonHeight,
+                fullSpan = true,
+            )
             val verticalOffset = clusterTop - (maxHeight - clusterSize) / 2f
 
             // The grid claims the full container height on its own now — SCORE/LEVEL/CUBES no
@@ -794,25 +801,35 @@ private fun GameScreen(
 private fun lerp(start: Dp, stop: Dp, fraction: Float): Dp = start + (stop - start) * fraction
 
 /** Where a control cluster's top edge sits for a given Button Height [fraction], shared by all
- *  three layouts so the knob means the same thing on any screen size or orientation: 0f rests the
- *  cluster on the bottom edge (clear of the navigation bar) and 1f raises it until it straddles
- *  the container's vertical midpoint — halfway up the screen, measured by where the cluster sits
- *  rather than by its top edge, which on a short landscape window would otherwise leave the knob
- *  almost no room to travel at all.
+ *  three layouts so the knob travels the same way on any screen size or orientation: 0f rests the
+ *  cluster on the bottom edge (clear of the navigation bar) and raising it walks the cluster up.
+ *  By default the top of the travel is the container's vertical midpoint — halfway up the screen,
+ *  measured by where the cluster sits rather than by its top edge, which on a short landscape
+ *  window would otherwise leave the knob almost no room at all.
  *
  *  Anchoring the top of the travel to the container rather than to the layout's own geometry is
  *  the point: the range used to stop at the bottom of the rendered grid, which is a different
  *  place on every device (portrait solved it from the aspect ratio) and nowhere at all on a square
  *  screen, where the grid runs clear to the bottom edge.
  *
- *  Note that 1f works out to exactly vertically centered, since a cluster centered on the midpoint
- *  is a cluster centered in the container — which is what landscape's Button Height default has
- *  always meant, and why that default is 1f rather than 0.5f.
+ *  [fullSpan] extends the top of the travel from the halfway line to the container's top edge,
+ *  for landscape — there the clusters sit in the pillarbox margins beside the grid rather than
+ *  over it, so there is no play area for a raised cluster to cover and no reason to stop at the
+ *  middle. Half-span's 1f is exactly vertically centered (a cluster centered on the midpoint is a
+ *  cluster centered in the container); full-span's 0.5f is the same place, which is why the two
+ *  Button Height defaults differ.
  *
- *  [coerceAtLeast] keeps the range from inverting on a container too short to hold a cluster below
- *  its midpoint — there the knob has nowhere to travel and every value lands centered. */
-private fun clusterTopFor(containerHeight: Dp, clusterHeight: Dp, bottomInset: Dp, fraction: Float): Dp {
-    val highest = (containerHeight - clusterHeight) / 2f
+ *  [coerceAtLeast] keeps the range from inverting on a container too short to hold a cluster
+ *  between its two stops — there the knob has nowhere to travel and every value lands at the top
+ *  of the range. */
+private fun clusterTopFor(
+    containerHeight: Dp,
+    clusterHeight: Dp,
+    bottomInset: Dp,
+    fraction: Float,
+    fullSpan: Boolean = false,
+): Dp {
+    val highest = if (fullSpan) 0.dp else (containerHeight - clusterHeight) / 2f
     val lowest = (containerHeight - bottomInset - clusterHeight).coerceAtLeast(highest)
     return lerp(lowest, highest, fraction)
 }
