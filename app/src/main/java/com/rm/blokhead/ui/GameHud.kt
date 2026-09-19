@@ -39,12 +39,17 @@ data class HudSnapshot(
  *  scoreDisplay() sidebar (counter.c's odometer-style digit widgets are simplified to plain
  *  text here). The colored surface itself runs all the way to the top edge, under the status
  *  bar, so the bar doesn't cut a hard seam into it — only the text content is inset below the
- *  status bar so it doesn't overlap the clock/battery icons. */
+ *  status bar so it doesn't overlap the clock/battery icons.
+ *
+ *  [alpha] is the bar's own background opacity. The default suits portrait, where the bar sits in
+ *  the dead band above the rendered grid and has nothing behind it worth seeing; the square layout
+ *  in MainActivity.kt floats this same bar directly over live play area instead, and passes a
+ *  lower value so the well's top rows stay readable through it. */
 @Composable
-fun GameHud(snapshot: HudSnapshot, modifier: Modifier = Modifier) {
+fun GameHud(snapshot: HudSnapshot, modifier: Modifier = Modifier, alpha: Float = 0.75f) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = alpha),
         shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
     ) {
         Row(

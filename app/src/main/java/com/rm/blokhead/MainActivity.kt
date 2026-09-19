@@ -22,7 +22,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
@@ -41,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -88,9 +93,9 @@ import kotlinx.coroutines.launch
 /** Each control cluster's fixed footprint in [GameControls]'s [MoveDPad]/[RotateCluster] — a
  *  square 3x3 grid of 48.dp cells with 6.dp gaps, so this one constant is both its width (used to
  *  keep the landscape layout's centered grid from ever overlapping the clusters beside it) and
- *  its height (used for landscape's vertical Button Height range); not imported directly since
- *  those are private constants of a different file's internal layout. */
-private val LANDSCAPE_CLUSTER_SIZE = 156.dp
+ *  its height (used by [clusterTopFor] for every layout's Button Height range); not imported
+ *  directly since those are private constants of a different file's internal layout. */
+private val CLUSTER_SIZE = 156.dp
 
 /** Matches [GameControls]'s private `CELL` — a single button's width at 100% Button Scale. Both
  *  orientations' control clusters sit right against the screen's physical edges by default, which
@@ -99,6 +104,24 @@ private val LANDSCAPE_CLUSTER_SIZE = 156.dp
  *  [Settings.portraitButtonInset]/[Settings.landscapeButtonInset] for devices that need more or
  *  less. */
 private val EDGE_INSET_UNIT = 48.dp
+
+/** How far from 1:1 a window can be and still get the square layout, as the ratio of its longer
+ *  edge to its shorter one. Deliberately not exactly 1.0: a true 1:1 panel is rare, but windows
+ *  that are square *enough* that neither the portrait nor the landscape layout has a spare band
+ *  to work with are not — split-screen halves, freeform windows and unfolded foldables all land
+ *  in here, and all of them want the same treatment. */
+private const val SQUARE_MAX_EDGE_RATIO = 1.18f
+
+/** The square layout's HUD bar opacity, overriding [GameHud]'s portrait-tuned default — the bar
+ *  sits over live play area here, so it has to be see-through enough to read the well's top rows
+ *  through it. */
+private const val SQUARE_HUD_ALPHA = 0.45f
+
+/** Multiplied into [Settings.buttonOpacity] for the square layout's corner clusters, for the same
+ *  reason as [SQUARE_HUD_ALPHA] — they overlap the well rather than sitting below it, so the
+ *  shipped default of fully opaque buttons would hide the corners of the bottom rows. The user's
+ *  own opacity setting still scales on top of this rather than being replaced by it. */
+private const val SQUARE_BUTTON_ALPHA = 0.7f
 
 class MainActivity : ComponentActivity() {
     // Activity-level field (not `remember`-ed — a composable can't be reached from
@@ -396,7 +419,113 @@ private fun GameScreen(
             .fillMaxSize()
             .background(wellBackgroundColor),
     ) {
-        if (isLandscape) {
+        // Measured from the container rather than from Configuration, which cannot answer this:
+        // ORIENTATION_SQUARE has been deprecated and unreturned since API 16, so a 1:1 window
+        // reports ORIENTATION_PORTRAIT and would fall into the portrait branch below, where
+        // `aspect` of ~1.0 collapses gridTopHeight to zero (HUD drawn straight over the well, no
+        // pause band) and inflates minSpacerHeight past the container's own height (control
+        // clusters pushed entirely off the bottom edge, with the Button Height knob unable to
+        // pull them back). BoxWithConstraints is also the only one of the two that sees the real
+        // window: screenWidthDp/screenHeightDp describe the display, not a split-screen or
+        // freeform slice of it.
+        val longEdge = maxOf(maxWidth, maxHeight)
+        val shortEdge = minOf(maxWidth, maxHeight)
+        val isSquare = shortEdge > 0.dp && longEdge / shortEdge <= SQUARE_MAX_EDGE_RATIO
+
+        // The bottom of the Button Height range means "resting on the bottom edge", which has to
+        // mean the bottom edge the player can actually reach — the gesture pill or the
+        // back/home/recents bar sits below it. Read as a value rather than applied as a modifier
+        // so it can go into clusterTopFor's arithmetic; a navigationBarsPadding() on the clusters
+        // themselves would be counted twice.
+        val bottomInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp
+
+        if (isSquare) {
+            // Neither of the other two layouts has anything to offer a square window. The
+            // renderer projects the well's near opening at exactly the viewport width and the
+            // opening is square, so its rendered size is min(width, height) whatever we do —
+            // which means every dp the HUD or a control cluster claims for itself here is a dp
+            // taken off the well. Portrait's stacked Column and landscape's pillarbox both spend
+            // slack on one axis that a square window simply doesn't have. So the grid takes the
+            // largest square the window allows and the HUD and clusters float over it as
+            // translucent overlays instead of sitting beside it.
+            val gridSize = shortEdge
+            val edgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.portraitButtonInset
+            // Bottom-anchored, so Button Height becomes a lift off the bottom edge: 0f leaves the
+            // clusters in the corners this layout is built around, and raising the knob walks
+            // them up off the well's bottom rows, as far as the halfway line.
+            val clusterSize = CLUSTER_SIZE * settings.buttonScale
+            val clusterLift = maxHeight - clusterSize -
+                clusterTopFor(maxHeight, clusterSize, bottomInset, settings.portraitButtonHeight)
+
+            AndroidView(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(gridSize)
+                    .let { base ->
+                        if (settings.gestureControlsEnabled) {
+                            base.gestureControls(
+                                onMove = onMove,
+                                onRotate = onRotateAction,
+                                onHardDrop = onHardDropAction,
+                                // Same reasoning as the other two layouts: one physical cell's
+                                // on-screen size is the natural "how far is one move" distance,
+                                // and the well is wellSize cells across this square.
+                                cellSize = gridSize / settings.wellSize,
+                            )
+                        } else {
+                            base
+                        }
+                    },
+                factory = { surfaceView },
+            )
+
+            // The HUD bar doubles as the pause target in both control schemes, since a grid this
+            // close to full-bleed leaves no border band to tap. It gets a real tap-catcher laid
+            // over it rather than a pause zone handed to gestureControls (portrait's approach)
+            // because Material3's Surface consumes pointer input: touches landing on the bar
+            // never reach the grid's gesture modifier underneath it in the first place. The
+            // drag-swallowing that portrait's comment warns about isn't a concern at this size —
+            // the bar is a visible piece of UI at the very top of the window, not an invisible
+            // margin a move-drag would plausibly start inside.
+            Box(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
+                GameHud(snapshot = hud, alpha = SQUARE_HUD_ALPHA, modifier = Modifier.fillMaxWidth())
+                if (!hud.isGameOver) {
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .pointerInput(engine) { detectTapGestures { onTogglePause() } },
+                    )
+                }
+            }
+
+            if (settings.onScreenButtonsEnabled) {
+                // No navigationBarsPadding here: clusterLift already has the nav bar in it via
+                // bottomInset, since these rest in the bottom corners by default — exactly where
+                // the gesture pill and the back/home/recents bar live.
+                val clusterAlpha = settings.buttonOpacity * SQUARE_BUTTON_ALPHA
+                val bottomStartModifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = edgeInset)
+                    .offset(y = -clusterLift)
+                    .alpha(clusterAlpha)
+                val bottomEndModifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(horizontal = edgeInset)
+                    .offset(y = -clusterLift)
+                    .alpha(clusterAlpha)
+                val dpadModifier = if (settings.leftHandedMode) bottomEndModifier else bottomStartModifier
+                val rotateModifier = if (settings.leftHandedMode) bottomStartModifier else bottomEndModifier
+                MoveDPad(
+                    diagonalEnabled = settings.diagonalButtonsEnabled,
+                    onMove = onMove,
+                    onDiagonalMove = onDiagonalMove,
+                    onHardDrop = onHardDropAction,
+                    modifier = dpadModifier,
+                    scale = settings.buttonScale,
+                )
+                RotateCluster(onRotate = onRotateAction, modifier = rotateModifier, scale = settings.buttonScale)
+            }
+        } else if (isLandscape) {
             // Pillarboxed: the grid (HUD + well) sits centered at a portrait-like aspect ratio
             // with dark margins on both sides, and the two control clusters are vertically
             // centered in those margins — a fundamentally different shape than portrait's
@@ -412,17 +541,16 @@ private fun GameScreen(
             // height) is what actually makes the rendered well as large as possible with zero
             // dead space top or bottom — landscape has width to spare for this, unlike portrait.
             val edgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.landscapeButtonInset
-            val clusterSize = LANDSCAPE_CLUSTER_SIZE * settings.buttonScale
+            val clusterSize = CLUSTER_SIZE * settings.buttonScale
             // No clusters to clear once buttons are hidden — the grid can claim the full square
             // instead of leaving the side margins dead.
             val clusterClearance = if (!settings.onScreenButtonsEnabled) 0.dp else (clusterSize + edgeInset + 8.dp) * 2
             val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
-            // 0f = top, 1f = bottom, 0.5f = centered (landscape's original fixed behavior, and
-            // still the default) — the clusters' own height caps how far they can travel each way
-            // before running off the top/bottom edge.
-            val verticalRange = ((maxHeight - clusterSize) / 2f).coerceAtLeast(0.dp)
-            val verticalOffset = lerp(-verticalRange, verticalRange, settings.landscapeButtonHeight)
+            // Same Button Height range as the other two layouts (see [clusterTopFor]) — expressed
+            // as an offset from center, since the clusters are aligned CenterStart/CenterEnd.
+            val clusterTop = clusterTopFor(maxHeight, clusterSize, bottomInset, settings.landscapeButtonHeight)
+            val verticalOffset = clusterTop - (maxHeight - clusterSize) / 2f
 
             // The grid claims the full container height on its own now — SCORE/LEVEL/CUBES no
             // longer sit in a bar above it (that ate noticeably into how large the well could
@@ -524,7 +652,6 @@ private fun GameScreen(
             // i.e. the rendered grid occupies the vertical band [0.5 - aspect/2, 0.5 + aspect/2].
             val containerHeight = maxHeight
             val aspect = maxWidth.value / maxHeight.value
-            val gridBottomFraction = 0.5f + aspect / 2f
             val gridTopHeight = containerHeight * (0.5f - aspect / 2f)
 
             // In gesture mode the pause-tap zone (the border above/below the rendered grid) is
@@ -579,13 +706,14 @@ private fun GameScreen(
             }
 
             if (settings.onScreenButtonsEnabled) {
-                // Default position is right after the grid's bottom edge (plus a small gap),
-                // which keeps controls just clear of it regardless of screen size; the "Button
-                // Height" setting slides that down towards the bottom edge instead of a fixed
-                // guessed position.
-                val minSpacerHeight = containerHeight * gridBottomFraction + 12.dp
-                val maxSpacerHeight = (containerHeight - 200.dp).coerceAtLeast(minSpacerHeight)
-                val spacerHeight = lerp(minSpacerHeight, maxSpacerHeight, settings.portraitButtonHeight)
+                // The spacer's height is the cluster's top edge, so Button Height maps straight
+                // onto it (see [clusterTopFor]). On a typical phone 0f lands the controls just
+                // below the grid, which is where this used to start its range from directly — the
+                // difference is that the top of the range is now the halfway line rather than the
+                // grid's bottom edge, so the knob still travels somewhere useful on a screen whose
+                // grid reaches much further down.
+                val clusterSize = CLUSTER_SIZE * settings.buttonScale
+                val spacerHeight = clusterTopFor(containerHeight, clusterSize, bottomInset, settings.portraitButtonHeight)
                 val portraitEdgeInset = 8.dp + EDGE_INSET_UNIT * settings.buttonScale * settings.portraitButtonInset
                 Column(modifier = Modifier.fillMaxSize()) {
                     Spacer(Modifier.height(spacerHeight))
@@ -664,3 +792,27 @@ private fun GameScreen(
 }
 
 private fun lerp(start: Dp, stop: Dp, fraction: Float): Dp = start + (stop - start) * fraction
+
+/** Where a control cluster's top edge sits for a given Button Height [fraction], shared by all
+ *  three layouts so the knob means the same thing on any screen size or orientation: 0f rests the
+ *  cluster on the bottom edge (clear of the navigation bar) and 1f raises it until it straddles
+ *  the container's vertical midpoint — halfway up the screen, measured by where the cluster sits
+ *  rather than by its top edge, which on a short landscape window would otherwise leave the knob
+ *  almost no room to travel at all.
+ *
+ *  Anchoring the top of the travel to the container rather than to the layout's own geometry is
+ *  the point: the range used to stop at the bottom of the rendered grid, which is a different
+ *  place on every device (portrait solved it from the aspect ratio) and nowhere at all on a square
+ *  screen, where the grid runs clear to the bottom edge.
+ *
+ *  Note that 1f works out to exactly vertically centered, since a cluster centered on the midpoint
+ *  is a cluster centered in the container — which is what landscape's Button Height default has
+ *  always meant, and why that default is 1f rather than 0.5f.
+ *
+ *  [coerceAtLeast] keeps the range from inverting on a container too short to hold a cluster below
+ *  its midpoint — there the knob has nowhere to travel and every value lands centered. */
+private fun clusterTopFor(containerHeight: Dp, clusterHeight: Dp, bottomInset: Dp, fraction: Float): Dp {
+    val highest = (containerHeight - clusterHeight) / 2f
+    val lowest = (containerHeight - bottomInset - clusterHeight).coerceAtLeast(highest)
+    return lerp(lowest, highest, fraction)
+}

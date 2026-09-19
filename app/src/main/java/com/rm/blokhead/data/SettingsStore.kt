@@ -28,8 +28,12 @@ data class Settings(
      *  default so existing installs see no behavior change. */
     val onScreenButtonsEnabled: Boolean = true,
     val startingDifficulty: Int = 1,
-    /** Portrait only. 0f = controls sit right below the grid (default); 1f = pushed down near
-     *  the bottom edge. See [landscapeButtonHeight] for landscape's equivalent knob. */
+    /** Portrait (and square) layouts. Where the control clusters sit vertically: 0f = resting on
+     *  the bottom edge, clear of the navigation bar (the shipped default); 1f = raised until they
+     *  straddle the halfway line, i.e. vertically centered. The range is measured off the window
+     *  itself rather than off the rendered grid, so it means the same thing on every screen — see
+     *  MainActivity.kt's `clusterTopFor`. See [landscapeButtonHeight] for landscape's own copy of
+     *  the same knob. */
     val portraitButtonHeight: Float = 0f,
     val soundEnabled: Boolean = true,
     val leftHandedMode: Boolean = false,
@@ -53,10 +57,11 @@ data class Settings(
      *  of 0f, since landscape's clusters sit right at the screen's physical edges otherwise,
      *  where a typical camera cutout/gesture-nav area is more likely to cover them. */
     val landscapeButtonInset: Float = 1f,
-    /** Landscape only. Where the control clusters sit vertically — 0f = top, 1f = bottom, 0.5f =
-     *  centered (the shipped default, matching landscape's original fixed behavior before this
-     *  setting existed). See [portraitButtonHeight] for portrait's equivalent knob. */
-    val landscapeButtonHeight: Float = 0.5f,
+    /** Landscape only. Same range and direction as [portraitButtonHeight] — 0f = resting on the
+     *  bottom edge, 1f = vertically centered. 1f is the shipped default here rather than 0f,
+     *  because centered is what landscape's clusters have always defaulted to, going back to
+     *  before this setting existed. */
+    val landscapeButtonHeight: Float = 1f,
 )
 
 private object Keys {
