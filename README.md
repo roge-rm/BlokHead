@@ -34,17 +34,14 @@ Dan
 
 ## Installing
 
-The easiest way to install BlokHead and keep it up to date is through my F-Droid repo, which has
-my other apps too. With the [F-Droid](https://f-droid.org/) app installed, open this link on
-your phone to add the repo, or scan the QR code on the [repo page](https://roge-rm.gitlab.io/repo/):
+The easiest way to install BlokHead and keep it up to date is through my F-Droid repo:
 
 [https://roge-rm.gitlab.io/repo](https://roge-rm.gitlab.io/repo?fingerprint=80438B253C257BCCE05CDCB9E3AC9B6174C2250659962B14FCBE7F32FD42D53E)
 
 Then search for BlokHead in F-Droid. When a new version comes out, F-Droid will offer it as an update.
 
 You can also download the APK from the [Releases](https://github.com/roge-rm/BlokHead/releases)
-page and sideload it. Both are signed with the same key, so you can switch between them without
-reinstalling.
+page and sideload it.
 
 ## Requirements
 
