@@ -24,6 +24,7 @@ fun MenuScreen(
     onStartGame: () -> Unit,
     onShowHighScores: () -> Unit,
     onShowSettings: () -> Unit,
+    onShowAbout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val startGameFocus = remember { FocusRequester() }
@@ -73,6 +74,15 @@ fun MenuScreen(
                 .gamepadFocusable(onActivate = onShowSettings),
         ) {
             Text("Settings")
+        }
+        OutlinedButton(
+            onClick = onShowAbout,
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .padding(top = 12.dp)
+                .gamepadFocusable(onActivate = onShowAbout),
+        ) {
+            Text("About")
         }
     }
 }

@@ -9,4 +9,5 @@ enum class AppScreen {
     HIGH_SCORES,
     SETTINGS,
     CONTROLLER,
+    ABOUT,
 }

@@ -70,6 +70,7 @@ import com.rm.blokhead.game.resolveGamepadAction
 import com.rm.blokhead.data.GamepadAction
 import com.rm.blokhead.render.BlokoutSurfaceView
 import com.rm.blokhead.render.wellBackgroundColor
+import com.rm.blokhead.ui.AboutScreen
 import com.rm.blokhead.ui.AppScreen
 import com.rm.blokhead.ui.GameControls
 import com.rm.blokhead.ui.GameHud
@@ -173,6 +174,7 @@ private fun BlokHeadApp(gamepadRouter: GamepadInputRouter) {
                 AppScreen.HIGH_SCORES -> { { sfx.playMenu(); screen = AppScreen.MENU } }
                 AppScreen.SETTINGS -> { { sfx.playMenu(); screen = AppScreen.MENU } }
                 AppScreen.CONTROLLER -> { { sfx.playMenu(); screen = AppScreen.SETTINGS } }
+                AppScreen.ABOUT -> { { sfx.playMenu(); screen = AppScreen.MENU } }
                 AppScreen.GAME -> null
             }
         }
@@ -201,6 +203,10 @@ private fun BlokHeadApp(gamepadRouter: GamepadInputRouter) {
             onShowSettings = {
                 sfx.playMenu()
                 screen = AppScreen.SETTINGS
+            },
+            onShowAbout = {
+                sfx.playMenu()
+                screen = AppScreen.ABOUT
             },
         )
 
@@ -232,6 +238,11 @@ private fun BlokHeadApp(gamepadRouter: GamepadInputRouter) {
             bindings = gamepadBindings,
             onBindingsChange = { updated -> coroutineScope.launch { gamepadBindingsStore.save(updated) } },
             onBack = { sfx.playMenu(); screen = AppScreen.SETTINGS },
+        )
+
+        AppScreen.ABOUT -> AboutScreen(
+            versionName = BuildConfig.VERSION_NAME,
+            onBack = { sfx.playMenu(); screen = AppScreen.MENU },
         )
     }
 }
