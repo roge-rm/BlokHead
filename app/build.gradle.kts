@@ -5,10 +5,13 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val localProperties = Properties().apply {
-    val file = rootProject.file("local.properties")
-    if (file.exists()) file.inputStream().use { load(it) }
-}
+// Release signing comes from ../Keys/blokhead-keystore.properties, beside the project rather than
+// in it (the same layout as Acidulous), so neither the keystore nor its passwords can ever be
+// committed. Without that file, e.g. on a fresh clone, the release build is simply unsigned.
+val signingProperties: Properties? = rootProject.file("../Keys/blokhead-keystore.properties")
+    .takeIf { it.exists() }
+    ?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
+val releaseStoreFile = signingProperties?.getProperty("storeFile")
 
 android {
     namespace = "com.rm.blokhead"
@@ -26,17 +29,13 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Release signing credentials are supplied via local.properties (never committed) as
-    // blokhead.release.{storeFile,storePassword,keyAlias,keyPassword}. Falls back to an
-    // unsigned release build when they're absent, so a plain checkout still builds.
-    val releaseStoreFile = localProperties.getProperty("blokhead.release.storeFile")
     signingConfigs {
         if (releaseStoreFile != null) {
             create("release") {
                 storeFile = file(releaseStoreFile)
-                storePassword = localProperties.getProperty("blokhead.release.storePassword")
-                keyAlias = localProperties.getProperty("blokhead.release.keyAlias")
-                keyPassword = localProperties.getProperty("blokhead.release.keyPassword")
+                storePassword = signingProperties?.getProperty("storePassword")
+                keyAlias = signingProperties?.getProperty("keyAlias")
+                keyPassword = signingProperties?.getProperty("keyPassword")
             }
         }
     }
