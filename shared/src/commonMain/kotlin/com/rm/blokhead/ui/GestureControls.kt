@@ -9,6 +9,7 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
 import com.rm.blokhead.game.Axis
 import com.rm.blokhead.game.stepsFromAccumulated
 import kotlin.math.abs
@@ -40,7 +41,7 @@ private const val ROTATE_TWIST_COMMIT_DEGREES = ROTATE_TWIST_STEP_DEGREES / 4f
 
 private fun centroidAndAngleDegrees(a: Offset, b: Offset): Pair<Offset, Float> {
     val centroid = Offset((a.x + b.x) / 2f, (a.y + b.y) / 2f)
-    val angle = Math.toDegrees(atan2((b.y - a.y).toDouble(), (b.x - a.x).toDouble())).toFloat()
+    val angle = (atan2((b.y - a.y).toDouble(), (b.x - a.x).toDouble()) * 180.0 / PI).toFloat()
     return centroid to angle
 }
 

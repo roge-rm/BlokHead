@@ -40,11 +40,11 @@ class HighScoreTableTest {
     @Test
     fun `encode-decode round trip preserves entries`() {
         val entries = listOf(HighScoreEntry("Alice", 250), HighScoreEntry("Bob", 100))
-        assertEquals(entries, HighScoreStore.decode(HighScoreStore.encode(entries)))
+        assertEquals(entries, HighScoreCodec.decode(HighScoreCodec.encode(entries)))
     }
 
     @Test
     fun `decode of blank input is an empty list`() {
-        assertEquals(emptyList<HighScoreEntry>(), HighScoreStore.decode(""))
+        assertEquals(emptyList<HighScoreEntry>(), HighScoreCodec.decode(""))
     }
 }

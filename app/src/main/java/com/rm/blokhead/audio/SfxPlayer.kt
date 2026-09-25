@@ -10,9 +10,8 @@ import com.rm.blokhead.R
  * not licensed samples), played via [SoundPool] for low-latency, overlapping playback. The
  * original had no audio at all; this is new, not a port of anything.
  */
-class SfxPlayer(context: Context) {
-    /** Gated by the Settings screen's sound toggle; set from the UI layer. */
-    var muted: Boolean = false
+class SfxPlayer(context: Context) : Sfx {
+    override var muted: Boolean = false
 
     private val soundPool = SoundPool.Builder()
         .setMaxStreams(4)
@@ -31,17 +30,17 @@ class SfxPlayer(context: Context) {
     private val gameOverId = soundPool.load(context, R.raw.sfx_gameover, 1)
     private val menuId = soundPool.load(context, R.raw.sfx_menu, 1)
 
-    fun playMove() = play(moveId)
-    fun playRotate() = play(rotateId)
-    fun playLock() = play(lockId)
-    fun playClear() = play(clearId)
-    fun playGameOver() = play(gameOverId)
-    fun playMenu() = play(menuId)
+    override fun playMove() = play(moveId)
+    override fun playRotate() = play(rotateId)
+    override fun playLock() = play(lockId)
+    override fun playClear() = play(clearId)
+    override fun playGameOver() = play(gameOverId)
+    override fun playMenu() = play(menuId)
 
     private fun play(soundId: Int) {
         if (muted) return
         soundPool.play(soundId, 1f, 1f, /* priority = */ 1, /* loop = */ 0, /* rate = */ 1f)
     }
 
-    fun release() = soundPool.release()
+    override fun release() = soundPool.release()
 }
