@@ -12,6 +12,7 @@ datastorePreferences = "1.1.1"
 composeMultiplatform = "1.12.1"
 composeMultiplatformMaterial3 = "1.9.0"
 kotlinxCoroutines = "1.10.2"
+kotlinxBrowser = "0.5.0"
 
 [libraries]
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
@@ -35,6 +36,7 @@ jb-compose-runtime = { group = "org.jetbrains.compose.runtime", name = "runtime"
 jb-compose-foundation = { group = "org.jetbrains.compose.foundation", name = "foundation", version.ref = "composeMultiplatform" }
 jb-compose-ui = { group = "org.jetbrains.compose.ui", name = "ui", version.ref = "composeMultiplatform" }
 jb-compose-material3 = { group = "org.jetbrains.compose.material3", name = "material3", version.ref = "composeMultiplatformMaterial3" }
+kotlinx-browser = { group = "org.jetbrains.kotlinx", name = "kotlinx-browser", version.ref = "kotlinxBrowser" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 
 [plugins]

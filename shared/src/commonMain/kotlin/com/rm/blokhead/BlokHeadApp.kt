@@ -170,6 +170,7 @@ fun BlokHeadApp(platform: BlokHeadPlatform, gamepadRouter: GamepadInputRouter) {
                 sfx.playMenu()
                 screen = AppScreen.ABOUT
             },
+            footnote = platform.menuFootnote,
         )
 
         AppScreen.GAME -> GameScreen(
@@ -302,12 +303,11 @@ private fun GameScreen(
     // paused overlay's own "Menu" button listens for as Confirm, resolving anything but Pause
     // itself here would silently eat that press before it ever reached Compose's focus handling.
     DisposableEffect(sessionId) {
-        gamepadRouter.gameplayHandler = { keyCode ->
+        val performAction: (GamepadAction?) -> Boolean = { requested ->
             val action = if (showExitConfirm || hud.isGameOver) {
                 null
             } else {
-                resolveGamepadAction(keyCode, gamepadBindings.keyCodes)
-                    ?.takeIf { !hud.isPaused || it == GamepadAction.Pause }
+                requested?.takeIf { !hud.isPaused || it == GamepadAction.Pause }
             }
             when (action) {
                 GamepadAction.MoveLeft -> { sfx.playMove(); surfaceView.enqueue { moveLeft() } }
@@ -326,9 +326,12 @@ private fun GameScreen(
             }
             action != null
         }
+        gamepadRouter.gameplayHandler = { keyCode -> performAction(resolveGamepadAction(keyCode, gamepadBindings.keyCodes)) }
+        gamepadRouter.actionHandler = performAction
         gamepadRouter.backHandler = { if (showExitConfirm) showExitConfirm = false else handleBack() }
         onDispose {
             gamepadRouter.gameplayHandler = null
+            gamepadRouter.actionHandler = null
             gamepadRouter.backHandler = null
         }
     }
@@ -567,7 +570,7 @@ private fun GameScreen(
                     .statusBarsPadding()
                     .padding(horizontal = edgeInset, vertical = 8.dp),
             ) {
-                HudStat("SCORE", hud.score.toString())
+                HudStat("SCORE", hud.score.toString(), onDarkBackground = true)
             }
             Column(
                 modifier = Modifier
@@ -575,8 +578,8 @@ private fun GameScreen(
                     .statusBarsPadding()
                     .padding(horizontal = edgeInset, vertical = 8.dp),
             ) {
-                HudStat("LEVEL", hud.level.toString())
-                HudStat("CUBES", hud.cubesDropped.toString(), modifier = Modifier.padding(top = 8.dp))
+                HudStat("LEVEL", hud.level.toString(), onDarkBackground = true)
+                HudStat("CUBES", hud.cubesDropped.toString(), modifier = Modifier.padding(top = 8.dp), onDarkBackground = true)
             }
             if (settings.onScreenButtonsEnabled) {
                 if (settings.leftHandedMode) {

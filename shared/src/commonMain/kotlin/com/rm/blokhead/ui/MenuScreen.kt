@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /** The title screen, standing in for the original's initial menu.c state before startGame(). */
@@ -26,6 +27,8 @@ fun MenuScreen(
     onShowSettings: () -> Unit,
     onShowAbout: () -> Unit,
     modifier: Modifier = Modifier,
+    /** A short line under the buttons, e.g. the browser build's keyboard controls. */
+    footnote: String? = null,
 ) {
     val startGameFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { startGameFocus.requestFocus() }
@@ -83,6 +86,15 @@ fun MenuScreen(
                 .gamepadFocusable(onActivate = onShowAbout),
         ) {
             Text("About")
+        }
+        if (footnote != null) {
+            Text(
+                text = footnote,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(0.85f).padding(top = 32.dp),
+            )
         }
     }
 }

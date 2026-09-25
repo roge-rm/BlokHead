@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /** A snapshot of the fields [GameEngine] exposes for display, read on a polling timer from
@@ -101,12 +102,18 @@ fun PausedOverlay(onMenuClick: () -> Unit, modifier: Modifier = Modifier) {
  *  of via [GameHud]'s single horizontal bar, which there would otherwise eat into the grid's
  *  full-height budget. */
 @Composable
-fun HudStat(label: String, value: String, modifier: Modifier = Modifier) {
+fun HudStat(label: String, value: String, modifier: Modifier = Modifier, onDarkBackground: Boolean = false) {
+    // On the well's always-dark margin (landscape) the theme's own text colors would be dark-on-
+    // dark in light mode, so those callers ask for light text instead.
+    val labelColor = if (onDarkBackground) HUD_ON_DARK.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val valueColor = if (onDarkBackground) HUD_ON_DARK else MaterialTheme.colorScheme.onSurface
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(text = value, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+        Text(text = label, style = MaterialTheme.typography.labelSmall, color = labelColor)
+        Text(text = value, style = MaterialTheme.typography.titleMedium, color = valueColor)
     }
 }
+
+private val HUD_ON_DARK = Color(0xFFE6E6EC)
 
 /** Full-screen scrim shown once [GameEngine.isGameOver] and the score has been resolved (either
  *  it didn't qualify for the high-score table, or [NameEntryOverlay] already saved it). Standing
