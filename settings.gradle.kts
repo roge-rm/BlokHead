@@ -24,4 +24,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "BlokHead"
 include(":app")
+include(":shared")
  

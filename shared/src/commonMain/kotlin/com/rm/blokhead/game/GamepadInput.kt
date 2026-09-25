@@ -1,12 +1,11 @@
 package com.rm.blokhead.game
 
-import android.view.KeyEvent
 import com.rm.blokhead.data.GamepadAction
 import com.rm.blokhead.data.GamepadBindings
 
 /** Pure resolver: which [GamepadAction] (if any) [keyCode] triggers under [bindings]. The single
- *  seam between a raw captured KeyEvent and gameplay — kept free of Android/Compose dependencies
- *  (beyond the [KeyEvent] keycode constants themselves) so it's directly unit-testable. */
+ *  seam between a raw captured key press and gameplay — kept free of Android/Compose dependencies
+ *  (keycodes are [Keycodes] constants) so it's directly unit-testable. */
 fun resolveGamepadAction(keyCode: Int, bindings: Map<GamepadAction, Int?>): GamepadAction? =
     bindings.entries.firstOrNull { it.value == keyCode }?.key
 
@@ -33,21 +32,21 @@ fun reassignBinding(bindings: GamepadBindings, action: GamepadAction, keyCode: I
  *  couple of common extras (Select, right stick) a user might still rebind to manually. */
 fun keycodeDisplayName(keyCode: Int?): String = when (keyCode) {
     null -> "Unbound"
-    KeyEvent.KEYCODE_DPAD_UP -> "D-Pad Up"
-    KeyEvent.KEYCODE_DPAD_DOWN -> "D-Pad Down"
-    KeyEvent.KEYCODE_DPAD_LEFT -> "D-Pad Left"
-    KeyEvent.KEYCODE_DPAD_RIGHT -> "D-Pad Right"
-    KeyEvent.KEYCODE_BUTTON_A -> "A"
-    KeyEvent.KEYCODE_BUTTON_B -> "B"
-    KeyEvent.KEYCODE_BUTTON_X -> "X"
-    KeyEvent.KEYCODE_BUTTON_Y -> "Y"
-    KeyEvent.KEYCODE_BUTTON_L1 -> "L1"
-    KeyEvent.KEYCODE_BUTTON_R1 -> "R1"
-    KeyEvent.KEYCODE_BUTTON_L2 -> "L2"
-    KeyEvent.KEYCODE_BUTTON_R2 -> "R2"
-    KeyEvent.KEYCODE_BUTTON_THUMBL -> "Left Stick Click"
-    KeyEvent.KEYCODE_BUTTON_THUMBR -> "Right Stick Click"
-    KeyEvent.KEYCODE_BUTTON_START -> "Start"
-    KeyEvent.KEYCODE_BUTTON_SELECT -> "Select"
+    Keycodes.DPAD_UP -> "D-Pad Up"
+    Keycodes.DPAD_DOWN -> "D-Pad Down"
+    Keycodes.DPAD_LEFT -> "D-Pad Left"
+    Keycodes.DPAD_RIGHT -> "D-Pad Right"
+    Keycodes.BUTTON_A -> "A"
+    Keycodes.BUTTON_B -> "B"
+    Keycodes.BUTTON_X -> "X"
+    Keycodes.BUTTON_Y -> "Y"
+    Keycodes.BUTTON_L1 -> "L1"
+    Keycodes.BUTTON_R1 -> "R1"
+    Keycodes.BUTTON_L2 -> "L2"
+    Keycodes.BUTTON_R2 -> "R2"
+    Keycodes.BUTTON_THUMBL -> "Left Stick Click"
+    Keycodes.BUTTON_THUMBR -> "Right Stick Click"
+    Keycodes.BUTTON_START -> "Start"
+    Keycodes.BUTTON_SELECT -> "Select"
     else -> "Button $keyCode"
 }

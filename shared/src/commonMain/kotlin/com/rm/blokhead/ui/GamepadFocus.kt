@@ -14,11 +14,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
-import android.view.KeyEvent as AndroidKeyEvent
 
 /**
  * Android auto-assigns initial focus to the first focusable view in a window whenever it isn't in
@@ -63,7 +64,7 @@ fun Modifier.gamepadFocusable(shape: Shape? = null, onActivate: () -> Unit): Mod
             },
         )
         .onKeyEvent { event ->
-            if (event.type == KeyEventType.KeyDown && event.nativeKeyEvent.keyCode == AndroidKeyEvent.KEYCODE_BUTTON_A) {
+            if (event.type == KeyEventType.KeyDown && event.key == Key.ButtonA) {
                 onActivate()
                 true
             } else {
