@@ -14,6 +14,9 @@ import com.rm.blokhead.game.GameEngine
 interface BlokHeadPlatform {
     val versionName: String
 
+    /** Shown under the main menu's buttons; the browser build lists its keyboard controls here. */
+    val menuFootnote: String? get() = null
+
     fun createSettingsRepository(): SettingsRepository
     fun createHighScoreRepository(): HighScoreRepository
     fun createGamepadBindingsRepository(): GamepadBindingsRepository

@@ -22,6 +22,10 @@ class GamepadInputRouter {
      *  it handled the press; `false` means "not gameplay's business right now, defer to Back". */
     var gameplayHandler: ((keyCode: Int) -> Boolean)? = null
 
+    /** Set alongside [gameplayHandler] for input that names actions directly rather than going
+     *  through gamepad bindings — the browser build's keyboard controls. Same return convention. */
+    var actionHandler: ((com.rm.blokhead.data.GamepadAction) -> Boolean)? = null
+
     /** Non-null only while the controller-remapping screen is waiting for the next button press
      *  to bind to an action. Takes priority over everything else: while listening, every button
      *  (including A/B) is being captured for evaluation, not treated as navigation. */

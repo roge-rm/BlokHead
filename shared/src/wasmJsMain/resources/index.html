@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BlokHead</title>
+<link rel="icon" href="icon.png" type="image/png">
+<style>
+  html, body { margin: 0; height: 100%; background: #08090b; overflow: hidden; }
+  canvas { touch-action: none; }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #c8c8d0; font: 16px/1.5 system-ui, sans-serif; text-align: center; padding: 16px; }
+</style>
+<script>
+  // Sound effects for the Kotlin side (WebSfx calls blokSfx.play). Browsers only allow audio after
+  // a user gesture, so the AudioContext starts on the first click/tap/key; the files are fetched
+  // up front so the first sound isn't lost to a download.
+  window.blokSfx = (() => {
+    const names = ['move', 'rotate', 'lock', 'clear', 'gameover', 'menu'];
+    const raw = {}, buffers = {};
+    let ctx = null;
+    for (const n of names) {
+      raw[n] = fetch('sfx_' + n + '.wav').then(r => r.arrayBuffer()).catch(() => null);
+    }
+    function start() {
+      if (!ctx) {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        for (const n of names) {
+          raw[n].then(b => b && ctx.decodeAudioData(b)).then(buf => { if (buf) buffers[n] = buf; }).catch(() => {});
+        }
+      }
+      if (ctx.state === 'suspended') ctx.resume();
+    }
+    for (const type of ['pointerdown', 'keydown', 'touchstart']) {
+      window.addEventListener(type, start, { capture: true });
+    }
+    return {
+      play(n) {
+        if (!ctx || !buffers[n]) return;
+        const source = ctx.createBufferSource();
+        source.buffer = buffers[n];
+        source.connect(ctx.destination);
+        source.start();
+      },
+    };
+  })();
+</script>
+<script src="blokhead.js"></script>
+</head>
+<body>
+<div id="loading">Loading BlokHead…</div>
+</body>
+</html>
