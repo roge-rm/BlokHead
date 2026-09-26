@@ -10,7 +10,75 @@
   canvas { touch-action: none; }
   #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
     color: #c8c8d0; font: 16px/1.5 system-ui, sans-serif; text-align: center; padding: 16px; }
+  #loading { flex-direction: column; gap: 10px; }
+  #loading-bar { width: min(320px, 100%); height: 4px; border-radius: 2px; overflow: hidden; visibility: hidden; background: rgba(255, 255, 255, 0.12); }
+  #loading-fill { width: 0; height: 100%; transition: width 0.2s; background: #a6efff; }
+  #loading-amount { font-size: 13px; opacity: 0.7; font-variant-numeric: tabular-nums; min-height: 1.5em; }
 </style>
+<script>
+  // How much of the download has come, while it comes: the app's WebAssembly
+  // and scripts, against the sizes the build wrote beside the page
+  // (load-sizes.json, shared/build.gradle.kts). The WebAssembly loaders ask
+  // through fetch, so each answer is counted as it streams in on its way to
+  // them; the app's script counts when it has loaded. The app removes
+  // #loading when it starts.
+  window.loadProgress = (() => {
+    const seen = {};
+    const finished = new Set();
+    let sizes = null;
+    let drawing = false;
+    const mb = (n) => (n / 1048576).toFixed(1);
+    const draw = () => {
+      drawing = false;
+      const text = document.getElementById('loading-text');
+      if (!text) return;
+      let have = 0, total = 0;
+      if (sizes) {
+        for (const [name, size] of Object.entries(sizes)) {
+          total += size;
+          have += finished.has(name) ? size : Math.min(seen[name] || 0, size);
+        }
+      } else {
+        for (const name in seen) have += seen[name];
+      }
+      if (have === 0) return;
+      const amount = document.getElementById('loading-amount');
+      if (total > 0) {
+        document.getElementById('loading-bar').style.visibility = 'visible';
+        document.getElementById('loading-fill').style.width = (100 * have / total).toFixed(1) + '%';
+        amount.textContent = have >= total ? mb(total) + ' MB' : mb(have) + ' of ' + mb(total) + ' MB';
+        // All here: what is left is the browser compiling it, and the app starting.
+        if (have >= total) text.textContent = 'Starting BlokHead…';
+      } else {
+        amount.textContent = mb(have) + ' MB';
+      }
+    };
+    const redraw = () => { if (!drawing) { drawing = true; requestAnimationFrame(draw); } };
+    const realFetch = window.fetch.bind(window);
+    realFetch('load-sizes.json', { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : null)).catch(() => null)
+      .then((s) => { sizes = s; redraw(); });
+    window.fetch = async (input, init) => {
+      const response = await realFetch(input, init);
+      const name = new URL(typeof input === 'string' ? input : (input.url || String(input)), location.href)
+        .pathname.split('/').pop();
+      if (!/\.(wasm|js)$/.test(name) || !response.ok || !response.body || finished.has(name)) return response;
+      const counted = response.body.pipeThrough(new TransformStream({
+        transform(chunk, out) {
+          seen[name] = (seen[name] || 0) + chunk.byteLength;
+          redraw();
+          out.enqueue(chunk);
+        },
+        flush() {
+          finished.add(name);
+          redraw();
+        },
+      }));
+      return new Response(counted, { status: response.status, statusText: response.statusText, headers: response.headers });
+    };
+    return { done(name) { finished.add(name); redraw(); } };
+  })();
+</script>
 <script>
   // Sound effects for the Kotlin side (WebSfx calls blokSfx.play). Browsers only allow audio after
   // a user gesture, so the AudioContext starts on the first click/tap/key; the files are fetched
@@ -45,9 +113,13 @@
     };
   })();
 </script>
-<script src="blokhead.js"></script>
+<script src="blokhead.js" defer onload="loadProgress.done('blokhead.js')"></script>
 </head>
 <body>
-<div id="loading">Loading BlokHead…</div>
+<div id="loading">
+  <div id="loading-text">Loading BlokHead…</div>
+  <div id="loading-bar"><div id="loading-fill"></div></div>
+  <div id="loading-amount"></div>
+</div>
 </body>
 </html>
