@@ -38,7 +38,7 @@ data class HudSnapshot(
 
 /** Score/level/cubes readout pinned to the top of the screen, standing in for the original's
  *  scoreDisplay() sidebar (counter.c's odometer-style digit widgets are simplified to plain
- *  text here). The colored surface itself runs all the way to the top edge, under the status
+ *  text here). The coloured surface itself runs all the way to the top edge, under the status
  *  bar, so the bar doesn't cut a hard seam into it — only the text content is inset below the
  *  status bar so it doesn't overlap the clock/battery icons.
  *
@@ -103,7 +103,7 @@ fun PausedOverlay(onMenuClick: () -> Unit, modifier: Modifier = Modifier) {
  *  full-height budget. */
 @Composable
 fun HudStat(label: String, value: String, modifier: Modifier = Modifier, onDarkBackground: Boolean = false) {
-    // On the well's always-dark margin (landscape) the theme's own text colors would be dark-on-
+    // On the well's always-dark margin (landscape) the theme's own text colours would be dark-on-
     // dark in light mode, so those callers ask for light text instead.
     val labelColor = if (onDarkBackground) HUD_ON_DARK.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val valueColor = if (onDarkBackground) HUD_ON_DARK else MaterialTheme.colorScheme.onSurface

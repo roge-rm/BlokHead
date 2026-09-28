@@ -75,7 +75,7 @@ import kotlinx.coroutines.launch
 
 /** Each control cluster's fixed footprint in [GameControls]'s [MoveDPad]/[RotateCluster] — a
  *  square 3x3 grid of 48.dp cells with 6.dp gaps, so this one constant is both its width (used to
- *  keep the landscape layout's centered grid from ever overlapping the clusters beside it) and
+ *  keep the landscape layout's centred grid from ever overlapping the clusters beside it) and
  *  its height (used by [clusterTopFor] for every layout's Button Height range); not imported
  *  directly since those are private constants of a different file's internal layout. */
 private val CLUSTER_SIZE = 156.dp
@@ -241,7 +241,7 @@ private fun GameScreen(
     // GameEngine's mutable state is owned by the surface's game loop (the GL thread on Android); this polls the
     // plain Int/Boolean fields on a timer for display rather than wiring a proper state stream,
     // since a HUD is fine lagging one tick behind and this avoids adding cross-thread
-    // synchronization to the ported game logic just for readouts. The same poll also diffs
+    // synchronisation to the ported game logic just for readouts. The same poll also diffs
     // cubesDropped/levelsDescended/isGameOver against their previous values to trigger sound
     // effects for lock/layer-clear/game-over — those are engine-state transitions, not direct
     // taps, so there's no single call site to hang a sfx.play...() off of otherwise.
@@ -479,9 +479,9 @@ private fun GameScreen(
                 RotateCluster(onRotate = onRotateAction, modifier = rotateModifier, scale = settings.buttonScale)
             }
         } else if (isLandscape) {
-            // Pillarboxed: the grid (HUD + well) sits centered at a portrait-like aspect ratio
+            // Pillarboxed: the grid (HUD + well) sits centred at a portrait-like aspect ratio
             // with dark margins on both sides, and the two control clusters are vertically
-            // centered in those margins — a fundamentally different shape than portrait's
+            // centred in those margins — a fundamentally different shape than portrait's
             // Column-with-spacer layout below, not a tweak of the same formula, since portrait's
             // aspect/spacer math assumes a container taller than it is wide and produces
             // negative/invalid values once it isn't.
@@ -501,7 +501,7 @@ private fun GameScreen(
             val gridWidth = minOf(maxHeight, maxWidth - clusterClearance).coerceAtLeast(0.dp)
 
             // Button Height spans the whole screen here, unlike the other two layouts (see
-            // [clusterTopFor]) — expressed as an offset from center, since the clusters are
+            // [clusterTopFor]) — expressed as an offset from centre, since the clusters are
             // aligned CenterStart/CenterEnd.
             val clusterTop = clusterTopFor(
                 maxHeight,
@@ -515,7 +515,7 @@ private fun GameScreen(
             // The grid claims the full container height on its own now — SCORE/LEVEL/CUBES no
             // longer sit in a bar above it (that ate noticeably into how large the well could
             // render); they're laid out below instead, tucked into the side margins' otherwise
-            // unused space above the vertically-centered control clusters. With no HUD bar left
+            // unused space above the vertically-centred control clusters. With no HUD bar left
             // to tap, the grid itself is the pause target.
             surfaceView.Content(
                 modifier = Modifier
@@ -542,7 +542,7 @@ private fun GameScreen(
 
             // Gesture mode: a tap on the grid itself does nothing (it's move/rotate/drop
             // territory) — pause instead lives on the pillarbox side margins, the only "black
-            // border" area landscape has, one tap-catcher per side since the grid sits centered.
+            // border" area landscape has, one tap-catcher per side since the grid sits centred.
             if (settings.gestureControlsEnabled) {
                 val marginWidth = ((maxWidth - gridWidth) / 2f).coerceAtLeast(0.dp)
                 Box(
@@ -607,7 +607,7 @@ private fun GameScreen(
         } else {
             // BlokoutRenderer's camera solves the vertical FOV so the well's near opening exactly
             // fills the viewport width; since the well is square (width == depth), that makes the
-            // opening's projected height a fixed `aspect` fraction of the screen height, centered —
+            // opening's projected height a fixed `aspect` fraction of the screen height, centred —
             // i.e. the rendered grid occupies the vertical band [0.5 - aspect/2, 0.5 + aspect/2].
             val containerHeight = maxHeight
             val aspect = maxWidth.value / maxHeight.value
@@ -766,8 +766,8 @@ private fun lerp(start: Dp, stop: Dp, fraction: Float): Dp = start + (stop - sta
  *  [fullSpan] extends the top of the travel from the halfway line to the container's top edge,
  *  for landscape — there the clusters sit in the pillarbox margins beside the grid rather than
  *  over it, so there is no play area for a raised cluster to cover and no reason to stop at the
- *  middle. Half-span's 1f is exactly vertically centered (a cluster centered on the midpoint is a
- *  cluster centered in the container); full-span's 0.5f is the same place, which is why the two
+ *  middle. Half-span's 1f is exactly vertically centred (a cluster centred on the midpoint is a
+ *  cluster centred in the container); full-span's 0.5f is the same place, which is why the two
  *  Button Height defaults differ.
  *
  *  [coerceAtLeast] keeps the range from inverting on a container too short to hold a cluster

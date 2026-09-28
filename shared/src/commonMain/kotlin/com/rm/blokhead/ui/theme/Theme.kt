@@ -57,7 +57,7 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun BlokHeadTheme(
     // Default dark: the well/HUD chrome should stay dark regardless of system theme so it
-    // doesn't wash out the piece colors rendered in the GL surface.
+    // doesn't wash out the piece colours rendered in the GL surface.
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {

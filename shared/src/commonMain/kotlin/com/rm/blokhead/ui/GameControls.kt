@@ -39,7 +39,7 @@ private val GAP = 6.dp
  *  arrow keys -> move (X/Y), Q/A W/S D/E -> rotate (X/Y/Z, +/-), space -> hard drop. Two
  *  corner-anchored clusters (move d-pad left, rotate cluster right by default — swapped by
  *  [leftHanded]) rather than three separate groups with a dedicated drop button in the dead zone
- *  between them — hard drop instead lives in the d-pad's own center cell, since it's the same
+ *  between them — hard drop instead lives in the d-pad's own centre cell, since it's the same
  *  thumb doing the moving and dropping. */
 @Composable
 fun GameControls(
@@ -100,7 +100,7 @@ fun MoveDPad(
             RoundButton(
                 "⏬",
                 size = cell,
-                // Faded relative to the other buttons — it's still a different color so it
+                // Faded relative to the other buttons — it's still a different colour so it
                 // reads as a distinct kind of action, just not shouting over move/rotate.
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f),

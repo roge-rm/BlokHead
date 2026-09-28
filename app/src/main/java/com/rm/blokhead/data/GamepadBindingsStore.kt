@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.map
 private val Context.gamepadBindingsDataStore by preferencesDataStore(name = "gamepad_bindings")
 
 /** One intPreferencesKey per [GamepadAction] (mirroring [SettingsStore]'s one-key-per-field
- *  convention — every action enumerated individually, no generic/reflective serialization),
+ *  convention — every action enumerated individually, no generic/reflective serialisation),
  *  generated off the enum since all 12 share the same "action -> nullable keycode" shape. */
 private object GamepadKeys {
     val forAction: Map<GamepadAction, androidx.datastore.preferences.core.Preferences.Key<Int>> =

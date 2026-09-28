@@ -2,7 +2,7 @@ package com.rm.blokhead.game
 
 /**
  * A piece shape ported from blokout's Form struct (forms.c/forms.h) — a 3D grid of filled/empty
- * cubes plus a center point used as the pivot for rotation. Geometry-only: the original's
+ * cubes plus a centre point used as the pivot for rotation. Geometry-only: the original's
  * vertex/polygon lists exist to build the OpenGL mesh, which belongs to the renderer, not here.
  */
 class Form(
@@ -29,7 +29,7 @@ enum class BlockSet {
  * All 32 blokout piece shapes, ported from data/forms.dat (originally loaded at runtime from a
  * text file; embedded here since there's no equivalent asset-loading need in the Kotlin port).
  * Format per piece: "dimX dimY dimZ", then dimZ layers of dimY rows of dimX cube flags (top to
- * bottom is z=0..dimZ-1, matching the original's read order), then a "cx cy cz" center point —
+ * bottom is z=0..dimZ-1, matching the original's read order), then a "cx cy cz" centre point —
  * always (0, 0, 0) for every piece in the original data.
  */
 object FormCatalog {

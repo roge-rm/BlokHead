@@ -3,7 +3,7 @@ package com.rm.blokhead.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Brand: cyan/amber against near-black chrome, so the GL well/HUD reads clearly and the
-// UI never competes with the piece colors rendered inside the well itself.
+// UI never competes with the piece colours rendered inside the well itself.
 val BrandCyan80 = Color(0xFFA6EFFF)
 val BrandCyan40 = Color(0xFF0097A8)
 val BrandAmber80 = Color(0xFFFFD9A0)

@@ -63,7 +63,7 @@ fun AboutScreen(versionName: String, onBack: () -> Unit, modifier: Modifier = Mo
             AboutParagraph(
                 "An Android port of Blokout, the open source 3D falling block game based on the " +
                     "classic Blockout. The game code was ported over from Blokout so it plays the " +
-                    "way the original does, then tweaked to be more customizable and quicker to " +
+                    "way the original does, then tweaked to be more customisable and quicker to " +
                     "play. The graphics and the UI have been redone for mobile."
             )
             AboutParagraph(

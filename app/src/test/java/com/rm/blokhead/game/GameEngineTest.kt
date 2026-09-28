@@ -42,7 +42,7 @@ class GameEngineTest {
 
     @Test
     fun `moving right then left returns the block to its spawn column`() {
-        // Every piece spawns at its form's center point (always (0, 0, 0) in the original data),
+        // Every piece spawns at its form's centre point (always (0, 0, 0) in the original data),
         // i.e. flush against the low X/Y wall — so moveLeft from spawn is legitimately illegal
         // (no room to move); move right first, then back left, to round-trip legally.
         val engine = GameEngine(forms = cubeOnly, width = 3, depth = 3, height = 10, random = Random(0))

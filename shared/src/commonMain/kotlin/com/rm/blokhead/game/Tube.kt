@@ -8,7 +8,7 @@ import kotlin.math.floor
  * `form->dimensions`, which is `[x, y, height + 1]`: one extra Z-layer beyond the visible
  * `height` is always allocated as headroom, and the same `height + 1` value (not `height`) is
  * what the original compares against for both scoring and the game-over threshold — so it's
- * kept here as-is rather than normalized away.
+ * kept here as-is rather than normalised away.
  */
 class Tube(x: Int, y: Int, height: Int) {
     val dimensions = intArrayOf(x, y, height + 1)
@@ -27,7 +27,7 @@ class Tube(x: Int, y: Int, height: Int) {
     // Anything outside the stored grid reads as empty space. The original C code indexes one
     // layer above the top of the array on a freshly spawned block's very first collision check
     // (an out-of-bounds read it silently tolerated); treating out-of-range as "no cube" is the
-    // faithful behavior for that case and for any other query that strays outside the grid.
+    // faithful behaviour for that case and for any other query that strays outside the grid.
     fun isFilled(px: Int, py: Int, pz: Int): Boolean {
         if (px !in 0 until dimensions[0] || py !in 0 until dimensions[1] || pz !in 0 until dimensions[2]) {
             return false
@@ -52,7 +52,7 @@ class Tube(x: Int, y: Int, height: Int) {
      * newly-completed layers — that's left to a follow-up [clearLayers] call, so a caller (e.g.
      * GameEngine, for a brief flash animation) can display a completed layer for a moment before
      * it actually disappears. Returns the world-Z indices of layers the block just completed, in
-     * ascending order. [addBlock] is the original's immediate-clear behavior, for callers that
+     * ascending order. [addBlock] is the original's immediate-clear behaviour, for callers that
      * don't need the gap.
      */
     fun placeBlock(block: Block): List<Int> {

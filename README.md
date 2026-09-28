@@ -3,7 +3,7 @@
 BlokHead is an Android port of [Blokout](https://jlehtinen.net/blokout/), the open source 3D falling block game, based on the classic Blockout.
 It uses [jlehtine/blokout](https://github.com/jlehtine/blokout) as an upstream source, and the game code was ported over to Kotlin from there.
 
-The game mechanics started out as a direct port of Blokout, so it plays the way the original does, but they've since been tweaked to make the game more customizable and quicker to play. The graphics have been redone in OpenGL ES and the UI has been totally redone for a touch screen. You can play with on screen buttons, with gestures, or with an external controller.
+The game mechanics started out as a direct port of Blokout, so it plays the way the original does, but they've since been tweaked to make the game more customisable and quicker to play. The graphics have been redone in OpenGL ES and the UI has been totally redone for a touch screen. You can play with on screen buttons, with gestures, or with an external controller.
 
 It hasn't been tested much on different shaped devices, so there may be layout problems on some of them. If you run into one, please report it here or on the discord channel below.
 
@@ -16,7 +16,7 @@ Disclaimer: I am not a great programmer and this was made using Claude Opus 5.0
 Enjoy!
 Dan
 
-<img src="docs/screenshot-menu.png" alt="BlokHead's main menu: title, Start Game, High Scores, Settings and About" width="180" /> <img src="docs/screenshot-gameplay.png" alt="BlokHead mid-game: a partially built stack of colored cubes in the 3D well, with the move d-pad and rotate cluster below" width="180" /> <img src="docs/screenshot-settings.png" alt="BlokHead's settings screen: diagonal d-pad corners, left-handed mode, sound, starting difficulty, well size, button position and opacity, and block set" width="180" /> <img src="docs/screenshot-pause.png" alt="BlokHead's pause screen with its Menu button pressed, showing a Quit to Menu confirmation dialog" width="180" />
+<img src="docs/screenshot-menu.png" alt="BlokHead's main menu: title, Start Game, High Scores, Settings and About" width="180" /> <img src="docs/screenshot-gameplay.png" alt="BlokHead mid-game: a partially built stack of coloured cubes in the 3D well, with the move d-pad and rotate cluster below" width="180" /> <img src="docs/screenshot-settings.png" alt="BlokHead's settings screen: diagonal d-pad corners, left-handed mode, sound, starting difficulty, well size, button position and opacity, and block set" width="180" /> <img src="docs/screenshot-pause.png" alt="BlokHead's pause screen with its Menu button pressed, showing a Quit to Menu confirmation dialog" width="180" />
 
 ## Features
 
@@ -24,7 +24,7 @@ Dan
   Blokout.
 - Three block sets to choose from: flat, extended, and the full original set from Blokout.
 - On screen buttons: a d-pad to move (with optional diagonal corners) that drops the block from
-  its center, and a cluster to rotate. You can change their size, opacity and position, or flip them for left handed play.
+  its centre, and a cluster to rotate. You can change their size, opacity and position, or flip them for left handed play.
 - Gesture controls: drag with one finger to move, twist two fingers to rotate around Z, slide two
   fingers to rotate around X and Y, and long press to drop.
 - Bluetooth and USB controllers, with buttons you can remap in Settings.

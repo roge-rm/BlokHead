@@ -15,7 +15,7 @@ import kotlin.math.tan
 /**
  * Draws the same scene as :app's GLES BlokoutRenderer, but with Compose drawing calls, for
  * platforms with no GL surface to hand (the browser build). Same camera, same geometry
- * ([Geometry]), same colors ([SceneColors]); what GL's depth buffer did is done by drawing order:
+ * ([Geometry]), same colours ([SceneColors]); what GL's depth buffer did is done by drawing order:
  *
  *  1. the well grid, which lines the walls and floor and so is behind everything inside the well;
  *  2. locked cubes, only the faces turned towards the camera, farthest first;
@@ -97,7 +97,7 @@ class CanvasRenderer {
         drawLineList(lines, strokeWidth = lineWidth())
     }
 
-    /** One quad of a cube, projected, with its (flat) color. */
+    /** One quad of a cube, projected, with its (flat) colour. */
     private class ScreenFace(val corners: Array<Projected>, val color: Color) {
         val depth = corners.sumOf { it.w.toDouble() }.toFloat() / corners.size
 

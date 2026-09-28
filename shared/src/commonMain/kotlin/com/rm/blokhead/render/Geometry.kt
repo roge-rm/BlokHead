@@ -38,7 +38,7 @@ private val UNIT_CUBE_EDGES: List<Pair<FloatArray, FloatArray>> = run {
 }
 
 /** CPU-side mesh building. Every cube is baked with simple per-face directional shading (a stand-
- *  in for the original's GL_LIGHT0 + flat shading) directly into vertex colors, since the GLES2
+ *  in for the original's GL_LIGHT0 + flat shading) directly into vertex colours, since the GLES2
  *  shader here has no per-fragment lighting. Builds are cheap (a handful of cubes at a time), so
  *  meshes are simply rebuilt each frame rather than cached/updated incrementally. */
 object Geometry {
@@ -81,7 +81,7 @@ object Geometry {
      *  where a block can actually stop, instead of the arbitrary in-between heights a purely
      *  screen-even spacing would pick. The step is chosen from the well's height so the ring count
      *  stays in the same dense-but-not-cluttered range regardless of how deep the well is. Always
-     *  includes both z=0 and z=height (the latter possibly closer than [step] to its neighbor, if
+     *  includes both z=0 and z=height (the latter possibly closer than [step] to its neighbour, if
      *  height isn't a multiple of it).
      */
     fun evenLayerZRings(height: Int): List<Float> {
@@ -94,8 +94,8 @@ object Geometry {
 
     /** Builds the well's wireframe grid: a full unit grid on the floor AND all four side walls
      *  (matching the reference's gridded/textured walls, not just a floor grid with plain corner
-     *  edges), as GL_LINES vertex data (no color baked in — callers set a uniform color by
-     *  drawing this list with a fixed vertex color instead). [zRings] are the wall's horizontal
+     *  edges), as GL_LINES vertex data (no colour baked in — callers set a uniform colour by
+     *  drawing this list with a fixed vertex colour instead). [zRings] are the wall's horizontal
      *  ring positions (see [perceptuallyEvenZRings]) — the floor's own grid is unaffected, since
      *  every one of its lines lies at the single, fixed depth z=0. */
     fun buildWellGridLines(width: Int, depth: Int, height: Int, zRings: List<Float>, color: FloatArray): FloatList {

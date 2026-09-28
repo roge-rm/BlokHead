@@ -22,8 +22,8 @@ private const val FRAGMENT_SHADER = """
 """
 
 /** Minimal GLES2 replacement for the original's fixed-function pipeline: a single flat-shaded,
- *  per-vertex-color program used for both the well grid and the cubes. Lighting is baked into
- *  vertex colors on the CPU (see [Geometry]) rather than computed in the shader, since every
+ *  per-vertex-colour program used for both the well grid and the cubes. Lighting is baked into
+ *  vertex colours on the CPU (see [Geometry]) rather than computed in the shader, since every
  *  face is a flat quad and doesn't need more. */
 class ShaderProgram {
     val programId: Int = GLES20.glCreateProgram().also { program ->

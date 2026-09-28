@@ -2,10 +2,10 @@ package com.rm.blokhead.render
 
 import androidx.compose.ui.graphics.Color
 
-// Colors shared by both renderers (Android's GLES BlokoutRenderer and the browser's Canvas one),
-// so the game looks the same on each. Colors are rgba floats in 0..1.
+// Colours shared by both renderers (Android's GLES BlokoutRenderer and the browser's Canvas one),
+// so the game looks the same on each. Colours are rgba floats in 0..1.
 
-/** The GL surface's clear color, exposed as a Compose [Color] so the landscape layout can paint
+/** The GL surface's clear colour, exposed as a Compose [Color] so the landscape layout can paint
  *  the pillarbox margins around the well the exact same shade — otherwise they'd default to
  *  [androidx.compose.material3.ColorScheme.background], which is light in light theme and
  *  wouldn't read as the intended dark margin regardless of system theme. */
@@ -20,14 +20,14 @@ val WELL_LINE_COLOR = floatArrayOf(0.85f, 0.85f, 0.1f, 1f)
 val BLOCK_WIRE_COLOR = floatArrayOf(1f, 1f, 1f, 1f)
 val BLOCK_FILL_COLOR = floatArrayOf(0.75f, 0.85f, 1f, 0.22f)
 
-/** Deterministic per-layer hue, standing in for the original's randomized layerMaterials. */
+/** Deterministic per-layer hue, standing in for the original's randomised layerMaterials. */
 fun colorForLayer(z: Int): FloatArray {
     val hue = (z * 47) % 360
     return hsvToRgba(hue.toFloat(), 0.55f, 0.85f)
 }
 
 /** A completed layer flashes bright white the instant it completes, then eases back toward
- *  its normal color over [progress] (0f..1f) right up until it's actually removed — a quick
+ *  its normal colour over [progress] (0f..1f) right up until it's actually removed — a quick
  *  "flash, then reveal-and-vanish" rather than a flat highlight for the whole duration. */
 fun flashColor(base: FloatArray, progress: Float): FloatArray = floatArrayOf(
     lerp(1f, base[0], progress),

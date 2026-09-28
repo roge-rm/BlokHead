@@ -8,18 +8,18 @@ data class Settings(
     val diagonalButtonsEnabled: Boolean = false,
     /** When on, direct touch gestures on the grid itself (drag to move, two-finger pan/twist to
      *  rotate, tap to pause, double-tap to hard drop) work alongside the on-screen buttons — see
-     *  [com.rm.blokhead.ui.gestureControls]. Off by default so existing installs see no behavior
+     *  [com.rm.blokhead.ui.gestureControls]. Off by default so existing installs see no behaviour
      *  change. Independent of [onScreenButtonsEnabled]: either, both, or neither can be on. */
     val gestureControlsEnabled: Boolean = false,
     /** When off, the on-screen D-pad/rotate-cluster buttons (and every other Controls setting
      *  below, which is button-scheme-only) are hidden — for players who've turned on
      *  [gestureControlsEnabled] and no longer want the buttons taking up screen space. On by
-     *  default so existing installs see no behavior change. */
+     *  default so existing installs see no behaviour change. */
     val onScreenButtonsEnabled: Boolean = true,
     val startingDifficulty: Int = 1,
     /** Portrait (and square) layouts. Where the control clusters sit vertically: 0f = resting on
      *  the bottom edge, clear of the navigation bar (the shipped default); 1f = raised until they
-     *  straddle the halfway line, i.e. vertically centered. The range is measured off the window
+     *  straddle the halfway line, i.e. vertically centred. The range is measured off the window
      *  itself rather than off the rendered grid, so it means the same thing on every screen — see
      *  MainActivity.kt's `clusterTopFor`. See [landscapeButtonHeight] for landscape's own copy of
      *  the same knob. */
@@ -48,9 +48,9 @@ data class Settings(
     val landscapeButtonInset: Float = 1f,
     /** Landscape only. Same direction as [portraitButtonHeight] — 0f = resting on the bottom edge
      *  — but the travel runs the whole height of the screen rather than stopping halfway, so 1f is
-     *  the top edge and 0.5f is vertically centered. Landscape's clusters sit in the pillarbox
+     *  the top edge and 0.5f is vertically centred. Landscape's clusters sit in the pillarbox
      *  margins beside the grid rather than over it, so a raised cluster covers no play area and
      *  there is nothing for the range to stop short of. 0.5f is the shipped default because
-     *  centered is what these have defaulted to since before this setting existed. */
+     *  centred is what these have defaulted to since before this setting existed. */
     val landscapeButtonHeight: Float = 0.5f,
 )

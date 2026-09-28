@@ -19,7 +19,7 @@ import kotlin.math.tan
  * texture.c, image.c and the GL calls in tube.c/blocks.c/game.c) — the immediate-mode/matrix-
  * stack API those relied on doesn't exist on GLES2+, so this redraws the same well + falling
  * piece with a small shader-based pipeline instead. Textured walls are dropped for now (solid
- * colors only); see the project plan's polish phase.
+ * colours only); see the project plan's polish phase.
  *
  * The camera looks straight down the well's long axis from above (like blockout.net's
  * BlockOut II reference), rather than the original's freely-orbited oblique view — fixed, no
@@ -43,7 +43,7 @@ class BlokoutRenderer(private val engine: GameEngine) : GLSurfaceView.Renderer {
     private var lastFrameTimeNanos = 0L
     private var standoffAboveTop = 0f
 
-    // Compose controls run on the UI thread but GameEngine isn't synchronized, so input is
+    // Compose controls run on the UI thread but GameEngine isn't synchronised, so input is
     // queued here and drained on the GL thread at the start of onDrawFrame, right before
     // engine.update() — the same thread that owns all other engine mutation.
     private val pendingActions = ConcurrentLinkedQueue<GameEngine.() -> Unit>()
