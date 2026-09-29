@@ -11,7 +11,7 @@ Requires Android 8.1 or higher.
 
 Questions, bug reports, suggestions? Check out the #blokhead channel **[on my discord](https://discord.gg/9Wun47jGC6)**.
 
-Disclaimer: I am not a programmer and this was made using Claude Opus 5.0
+Disclaimer: I am not a great programmer and this was made using Claude Opus 5.0
 
 Enjoy!
 Dan
