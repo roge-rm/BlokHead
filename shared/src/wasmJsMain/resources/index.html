@@ -10,7 +10,8 @@
   canvas { touch-action: none; }
   #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
     color: #c8c8d0; font: 16px/1.5 system-ui, sans-serif; text-align: center; padding: 16px; }
-  #loading { flex-direction: column; gap: 10px; }
+  #loading { flex-direction: column; gap: 12px; }
+  #loading img { width: 96px; height: 96px; border-radius: 22px; }
   #loading-bar { width: min(320px, 100%); height: 4px; border-radius: 2px; overflow: hidden; visibility: hidden; background: rgba(255, 255, 255, 0.12); }
   #loading-fill { width: 0; height: 100%; transition: width 0.2s; background: #a6efff; }
   #loading-amount { font-size: 13px; opacity: 0.7; font-variant-numeric: tabular-nums; min-height: 1.5em; }
@@ -117,6 +118,7 @@
 </head>
 <body>
 <div id="loading">
+  <img src="icon.png" alt="">
   <div id="loading-text">Loading BlokHead…</div>
   <div id="loading-bar"><div id="loading-fill"></div></div>
   <div id="loading-amount"></div>
