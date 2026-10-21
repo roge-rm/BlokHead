@@ -1,15 +1,10 @@
 # BlokHead
 
-BlokHead is an Android port of [Blokout](https://jlehtinen.net/blokout/), the open source 3D falling block game, based on the classic Blockout.
-It uses [jlehtine/blokout](https://github.com/jlehtine/blokout) as an upstream source, and the game code was ported over to Kotlin from there.
+BlokHead is an Android port of [Blokout](https://jlehtinen.net/blokout/), the open source 3D falling block game based on Blockout. It needs Android 8.1 or newer.
 
-The game mechanics started out as a direct port of Blokout, so it plays the way the original does, but they've since been tweaked to make the game more customisable and quicker to play. The graphics have been redone in OpenGL ES and the UI has been totally redone for a touch screen. You can play with on screen buttons, with gestures, or with an external controller.
+I ported [jlehtine/blokout](https://github.com/jlehtine/blokout) to Kotlin, with new graphics and touch controls, then changed the rules and settings to make it quicker to play and more customisable. Use screen buttons, gestures or a controller.
 
-It hasn't been tested much on different shaped devices, so there may be layout problems on some of them. If you run into one, please report it here or on the discord channel below.
-
-Requires Android 8.1 or higher.
-
-Questions, bug reports, suggestions? Check out the #blokhead channel **[on my discord](https://discord.gg/9Wun47jGC6)**.
+It hasn't been tested on many device shapes. If the layout doesn't work on yours, let me know in #blokhead [on my discord](https://discord.gg/9Wun47jGC6), or open an issue here.
 
 Enjoy!
 Dan
@@ -50,16 +45,14 @@ page and sideload it.
 - No NDK, no native code and no network access. The whole game is plain Kotlin and OpenGL ES 2.0
   through `GLSurfaceView`.
 
-## Building & testing
+## Building and testing
 
 ```
 ./gradlew assembleDebug        # build the debug APK
 ./gradlew testDebugUnitTest    # run the unit tests
 ```
 
-The game logic in `game/` is plain Kotlin with nothing from Android in it, so its tests run on the
-computer instead of the emulator. That's where the well, collision and scoring code gets checked
-against how the original does it.
+The tests run the plain Kotlin game logic on the computer, checking the well, collisions and scoring against Blokout.
 
 ## Architecture
 
@@ -67,7 +60,7 @@ against how the original does it.
   `GameEngine` that runs it all (`Tube`, `Block`, `Collision`, `Form`, `GameEngine`). None of it
   touches rendering, and all of it has unit tests.
 - `render/` - the OpenGL ES 2.0 renderer (`BlokoutRenderer`, `BlokoutSurfaceView`), plus the
-  perspective math in `Geometry` that keeps the well's grid lines evenly spaced from front to back
+  perspective maths in `Geometry` that keeps the well's grid lines evenly spaced from front to back
   however deep the well is.
 - `ui/` - the Jetpack Compose screens drawn over the GL surface: the main menu, the in-game HUD,
   pause, game over and high score overlays, the touch controls, Settings and About.
@@ -77,8 +70,7 @@ against how the original does it.
 
 ## Discussion and support
 
-Questions, ideas, bug reports?<br>
-Check out the #blokhead channel **[on my discord](https://discord.gg/9Wun47jGC6)**.
+Ask questions and report bugs in #blokhead [on my discord](https://discord.gg/9Wun47jGC6).
 
 ## Attribution
 
@@ -86,7 +78,7 @@ Check out the #blokhead channel **[on my discord](https://discord.gg/9Wun47jGC6)
   [jlehtine/blokout](https://github.com/jlehtine/blokout).
 - Ported to Kotlin and Android, with a new OpenGL ES 2.0 renderer and touch UI, by Dan Hunke.
 
-## License
+## Licence
 
 GNU General Public License v3 (or later), same as Blokout. See [LICENSE](LICENSE).
 
