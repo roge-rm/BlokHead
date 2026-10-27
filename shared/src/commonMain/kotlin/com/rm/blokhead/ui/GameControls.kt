@@ -1,5 +1,6 @@
 package com.rm.blokhead.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ButtonColors
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,10 +21,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rm.blokhead.game.Axis
+import com.rm.blokhead.render.wellBackgroundColor
+import com.rm.blokhead.ui.theme.AxisStroke
+import com.rm.blokhead.ui.theme.AxisTeal
+import com.rm.blokhead.ui.theme.DropGold
+import com.rm.blokhead.ui.theme.OnDropGold
+import com.rm.blokhead.ui.theme.WellLineYellow
 
 /** Every round control button is this size at the default 100% [Settings.buttonScale]; [GAP] is
  *  the breathing room between adjacent cells in a row, real or blank, so a row of e.g. two
@@ -97,17 +103,7 @@ fun MoveDPad(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
             RoundButton("◀", size = cell) { onMove(Axis.X, -1) }
-            RoundButton(
-                "⏬",
-                size = cell,
-                // Faded relative to the other buttons — it's still a different colour so it
-                // reads as a distinct kind of action, just not shouting over move/rotate.
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.55f),
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.85f),
-                ),
-                onClick = onHardDrop,
-            )
+            RoundButton("⏬", size = cell, style = PadStyle.Drop, onClick = onHardDrop)
             RoundButton("▶", size = cell) { onMove(Axis.X, 1) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -145,27 +141,29 @@ fun RotateCluster(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
             BlankCell(cell)
-            RoundButton("X+", size = cell) { onRotate(Axis.X, 1) }
-            RoundButton("Z+", size = cell) { onRotate(Axis.Z, 1) }
+            RoundButton("X+", size = cell, style = PadStyle.Rotate) { onRotate(Axis.X, 1) }
+            RoundButton("Z+", size = cell, style = PadStyle.Rotate) { onRotate(Axis.Z, 1) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-            RoundButton("Y−", size = cell) { onRotate(Axis.Y, -1) }
+            RoundButton("Y−", size = cell, style = PadStyle.Rotate) { onRotate(Axis.Y, -1) }
             BlankCell(cell)
-            RoundButton("Y+", size = cell) { onRotate(Axis.Y, 1) }
+            RoundButton("Y+", size = cell, style = PadStyle.Rotate) { onRotate(Axis.Y, 1) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-            RoundButton("Z−", size = cell) { onRotate(Axis.Z, -1) }
-            RoundButton("X−", size = cell) { onRotate(Axis.X, -1) }
+            RoundButton("Z−", size = cell, style = PadStyle.Rotate) { onRotate(Axis.Z, -1) }
+            RoundButton("X−", size = cell, style = PadStyle.Rotate) { onRotate(Axis.X, -1) }
             BlankCell(cell)
         }
     }
 }
 
+private enum class PadStyle { Move, Drop, Rotate }
+
 @Composable
 private fun RoundButton(
     label: String,
     size: Dp = CELL,
-    colors: ButtonColors = ButtonDefaults.filledTonalButtonColors(),
+    style: PadStyle = PadStyle.Move,
     onClick: () -> Unit,
 ) {
     // A plain Surface + manual tap detection, not Button/FilledTonalButton's built-in
@@ -174,10 +172,33 @@ private fun RoundButton(
     // onPress (fired the instant a pointer goes down) is used instead; `pressed` just drives a
     // darkened overlay for the same on-screen feedback clickable's ripple would have given.
     var pressed by remember { mutableStateOf(false) }
+    val containerColor: Color
+    val contentColor: Color
+    val border: BorderStroke?
+    when (style) {
+        PadStyle.Move -> {
+            // Filled disc so the yellow ring still reads when the pad sits on the well
+            // (square layout) or when Button Opacity is turned down.
+            containerColor = wellBackgroundColor.copy(alpha = 0.88f)
+            contentColor = WellLineYellow
+            border = BorderStroke(1.5.dp, WellLineYellow)
+        }
+        PadStyle.Drop -> {
+            containerColor = DropGold
+            contentColor = OnDropGold
+            border = null
+        }
+        PadStyle.Rotate -> {
+            containerColor = wellBackgroundColor.copy(alpha = 0.88f)
+            contentColor = AxisTeal
+            border = BorderStroke(1.5.dp, AxisStroke)
+        }
+    }
     Surface(
         shape = CircleShape,
-        color = colors.containerColor,
-        contentColor = colors.contentColor,
+        color = containerColor,
+        contentColor = contentColor,
+        border = border,
         // requiredSize, not size: if a row runs short on width (e.g. Button Scale pushed a
         // cluster wider than its share of the screen), `size()` lets the incoming width
         // constraint override the requested one while height stays unconstrained — squishing

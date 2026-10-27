@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -95,15 +96,9 @@ private val EDGE_INSET_UNIT = 48.dp
  *  in here, and all of them want the same treatment. */
 private const val SQUARE_MAX_EDGE_RATIO = 1.18f
 
-/** The square layout's HUD bar opacity, overriding [GameHud]'s portrait-tuned default — the bar
- *  sits over live play area here, so it has to be see-through enough to read the well's top rows
- *  through it. */
-private const val SQUARE_HUD_ALPHA = 0.45f
-
-/** Multiplied into [Settings.buttonOpacity] for the square layout's corner clusters, for the same
- *  reason as [SQUARE_HUD_ALPHA] — they overlap the well rather than sitting below it, so the
- *  shipped default of fully opaque buttons would hide the corners of the bottom rows. The user's
- *  own opacity setting still scales on top of this rather than being replaced by it. */
+/** Multiplied into [Settings.buttonOpacity] for the square layout's corner clusters — they
+ *  overlap the well rather than sitting below it, so fully opaque buttons would hide the corners
+ *  of the bottom rows. The user's own opacity setting still scales on top of this. */
 private const val SQUARE_BUTTON_ALPHA = 0.7f
 
 /** The whole app below the platform's window: menu, game and the screens around them. [platform]
@@ -152,26 +147,33 @@ fun BlokHeadApp(platform: BlokHeadPlatform, gamepadRouter: GamepadInputRouter) {
     }
 
     when (screen) {
-        AppScreen.MENU -> MenuScreen(
-            onStartGame = {
-                sfx.playMenu()
-                gameSessionId++
-                screen = AppScreen.GAME
-            },
-            onShowHighScores = {
-                sfx.playMenu()
-                screen = AppScreen.HIGH_SCORES
-            },
-            onShowSettings = {
-                sfx.playMenu()
-                screen = AppScreen.SETTINGS
-            },
-            onShowAbout = {
-                sfx.playMenu()
-                screen = AppScreen.ABOUT
-            },
-            footnote = platform.menuFootnote,
-        )
+        AppScreen.MENU -> {
+            var entries by remember { mutableStateOf(emptyList<HighScoreEntry>()) }
+            LaunchedEffect(Unit) { highScoreStore.entries.collect { entries = it } }
+            MenuScreen(
+                onStartGame = {
+                    sfx.playMenu()
+                    gameSessionId++
+                    screen = AppScreen.GAME
+                },
+                onShowHighScores = {
+                    sfx.playMenu()
+                    screen = AppScreen.HIGH_SCORES
+                },
+                onShowSettings = {
+                    sfx.playMenu()
+                    screen = AppScreen.SETTINGS
+                },
+                onShowAbout = {
+                    sfx.playMenu()
+                    screen = AppScreen.ABOUT
+                },
+                bestScore = entries.firstOrNull()?.score,
+                wellSize = settings.wellSize,
+                wellHeight = settings.wellHeight,
+                footnote = platform.menuFootnote,
+            )
+        }
 
         AppScreen.GAME -> GameScreen(
             platform = platform,
@@ -441,7 +443,7 @@ private fun GameScreen(
             // the bar is a visible piece of UI at the very top of the window, not an invisible
             // margin a move-drag would plausibly start inside.
             Box(modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
-                GameHud(snapshot = hud, alpha = SQUARE_HUD_ALPHA, modifier = Modifier.fillMaxWidth())
+                GameHud(snapshot = hud, modifier = Modifier.fillMaxWidth())
                 if (!hud.isGameOver) {
                     Box(
                         modifier = Modifier
@@ -705,6 +707,9 @@ private fun GameScreen(
                 onDismissRequest = { showExitConfirm = false },
                 title = { Text("Quit to Menu?") },
                 text = { Text("Your current game will be lost.") },
+                containerColor = MaterialTheme.colorScheme.surface,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                textContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 confirmButton = {
                     val quit = {
                         showExitConfirm = false
@@ -712,13 +717,13 @@ private fun GameScreen(
                         onExitToMenu()
                     }
                     TextButton(onClick = quit, modifier = Modifier.gamepadFocusable(onActivate = quit)) {
-                        Text("Quit")
+                        Text("Quit", color = MaterialTheme.colorScheme.primary)
                     }
                 },
                 dismissButton = {
                     val cancel = { showExitConfirm = false }
                     TextButton(onClick = cancel, modifier = Modifier.gamepadFocusable(onActivate = cancel)) {
-                        Text("Cancel")
+                        Text("Cancel", color = MaterialTheme.colorScheme.primary)
                     }
                 },
             )

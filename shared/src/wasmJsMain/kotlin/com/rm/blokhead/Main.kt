@@ -5,6 +5,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeViewport
+import com.rm.blokhead.render.wellBackgroundColor
 import com.rm.blokhead.ui.theme.BlokHeadTheme
 import kotlinx.browser.document
 
@@ -15,7 +16,7 @@ fun main() {
     document.getElementById("loading")?.remove()
     ComposeViewport(document.body!!) {
         BlokHeadTheme {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            Surface(modifier = Modifier.fillMaxSize(), color = wellBackgroundColor) {
                 BlokHeadApp(WebPlatform, gamepadRouter)
             }
         }

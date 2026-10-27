@@ -9,12 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -25,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.rm.blokhead.render.wellBackgroundColor
 
 /** A snapshot of the fields [GameEngine] exposes for display, read on a polling timer from
  *  MainActivity (see its doc for why polling rather than a proper state stream). */
@@ -38,32 +37,20 @@ data class HudSnapshot(
 
 /** Score/level/cubes readout pinned to the top of the screen, standing in for the original's
  *  scoreDisplay() sidebar (counter.c's odometer-style digit widgets are simplified to plain
- *  text here). The coloured surface itself runs all the way to the top edge, under the status
- *  bar, so the bar doesn't cut a hard seam into it — only the text content is inset below the
- *  status bar so it doesn't overlap the clock/battery icons.
- *
- *  [alpha] is the bar's own background opacity. The default suits portrait, where the bar sits in
- *  the dead band above the rendered grid and has nothing behind it worth seeing; the square layout
- *  in MainActivity.kt floats this same bar directly over live play area instead, and passes a
- *  lower value so the well's top rows stay readable through it. */
+ *  text here). Drawn on the well with no card, inset below the status bar so the numbers don't
+ *  overlap the clock/battery icons. */
 @Composable
-fun GameHud(snapshot: HudSnapshot, modifier: Modifier = Modifier, alpha: Float = 0.75f) {
-    Surface(
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.surface.copy(alpha = alpha),
-        shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp),
+fun GameHud(snapshot: HudSnapshot, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            HudStat("SCORE", snapshot.score.toString())
-            HudStat("LEVEL", snapshot.level.toString())
-            HudStat("CUBES", snapshot.cubesDropped.toString())
-        }
+        HudStat("SCORE", snapshot.score.toString(), onDarkBackground = true)
+        HudStat("LEVEL", snapshot.level.toString(), onDarkBackground = true)
+        HudStat("CUBES", snapshot.cubesDropped.toString(), onDarkBackground = true)
     }
 }
 
@@ -76,7 +63,7 @@ fun PausedOverlay(onMenuClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.75f)),
+            .background(wellBackgroundColor.copy(alpha = 0.85f)),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -87,6 +74,8 @@ fun PausedOverlay(onMenuClick: () -> Unit, modifier: Modifier = Modifier) {
             )
             OutlinedButton(
                 onClick = onMenuClick,
+                colors = ghostButtonColors(),
+                border = GhostBorder,
                 modifier = Modifier
                     .padding(top = 24.dp)
                     .gamepadFocusable(onActivate = onMenuClick),
@@ -103,8 +92,6 @@ fun PausedOverlay(onMenuClick: () -> Unit, modifier: Modifier = Modifier) {
  *  full-height budget. */
 @Composable
 fun HudStat(label: String, value: String, modifier: Modifier = Modifier, onDarkBackground: Boolean = false) {
-    // On the well's always-dark margin (landscape) the theme's own text colours would be dark-on-
-    // dark in light mode, so those callers ask for light text instead.
     val labelColor = if (onDarkBackground) HUD_ON_DARK.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
     val valueColor = if (onDarkBackground) HUD_ON_DARK else MaterialTheme.colorScheme.onSurface
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -128,7 +115,7 @@ fun GameOverOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f)),
+            .background(wellBackgroundColor.copy(alpha = 0.9f)),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -143,11 +130,17 @@ fun GameOverOverlay(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
             )
-            Button(onClick = onPlayAgain, modifier = Modifier.gamepadFocusable(onActivate = onPlayAgain)) {
+            Button(
+                onClick = onPlayAgain,
+                colors = tealButtonColors(),
+                modifier = Modifier.gamepadFocusable(onActivate = onPlayAgain),
+            ) {
                 Text("Play Again")
             }
             OutlinedButton(
                 onClick = onMainMenu,
+                colors = ghostButtonColors(),
+                border = GhostBorder,
                 modifier = Modifier
                     .padding(top = 12.dp)
                     .gamepadFocusable(onActivate = onMainMenu),
@@ -167,7 +160,7 @@ fun NameEntryOverlay(finalScore: Int, onSubmit: (name: String) -> Unit, modifier
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f)),
+            .background(wellBackgroundColor.copy(alpha = 0.9f)),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -190,6 +183,7 @@ fun NameEntryOverlay(finalScore: Int, onSubmit: (name: String) -> Unit, modifier
             )
             Button(
                 onClick = { onSubmit(name.trim().ifBlank { "Player" }) },
+                colors = tealButtonColors(),
                 modifier = Modifier.padding(top = 16.dp),
             ) {
                 Text("Save")

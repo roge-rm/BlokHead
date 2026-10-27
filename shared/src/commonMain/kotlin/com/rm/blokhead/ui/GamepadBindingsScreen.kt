@@ -34,6 +34,7 @@ import com.rm.blokhead.data.GamepadAction
 import com.rm.blokhead.data.GamepadBindings
 import com.rm.blokhead.game.keycodeDisplayName
 import com.rm.blokhead.game.reassignBinding
+import com.rm.blokhead.render.wellBackgroundColor
 import kotlinx.coroutines.delay
 
 /** Settings sub-screen letting the player see and rebind every gameplay gamepad action — A and B
@@ -76,6 +77,7 @@ fun GamepadBindingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(wellBackgroundColor)
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
@@ -119,12 +121,16 @@ fun GamepadBindingsScreen(
         ) {
             OutlinedButton(
                 onClick = { onBindingsChange(GamepadBindings()) },
+                colors = ghostButtonColors(),
+                border = GhostBorder,
                 modifier = Modifier.gamepadFocusable(onActivate = { onBindingsChange(GamepadBindings()) }),
             ) {
                 Text("Reset to Defaults")
             }
             OutlinedButton(
                 onClick = onBack,
+                colors = ghostButtonColors(),
+                border = GhostBorder,
                 modifier = Modifier.gamepadFocusable(onActivate = onBack),
             ) {
                 Text("Back")

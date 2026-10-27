@@ -1,5 +1,6 @@
 package com.rm.blokhead.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
+import com.rm.blokhead.render.wellBackgroundColor
 
 /** What the game is, where it came from, and the GPL notice. Back sits on the title row rather
  *  than at the bottom so it's reachable without scrolling, and the column is width-capped since
@@ -34,6 +36,7 @@ fun AboutScreen(versionName: String, onBack: () -> Unit, modifier: Modifier = Mo
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(wellBackgroundColor)
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
@@ -53,6 +56,8 @@ fun AboutScreen(versionName: String, onBack: () -> Unit, modifier: Modifier = Mo
                 )
                 OutlinedButton(
                     onClick = onBack,
+                    colors = ghostButtonColors(),
+                    border = GhostBorder,
                     modifier = Modifier
                         .focusRequester(backFocus)
                         .gamepadFocusable(onActivate = onBack),

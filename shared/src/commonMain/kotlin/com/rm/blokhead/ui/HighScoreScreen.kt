@@ -1,5 +1,6 @@
 package com.rm.blokhead.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import com.rm.blokhead.data.HighScoreEntry
+import com.rm.blokhead.render.wellBackgroundColor
 
 /** Ranked score list, standing in for the original's drawScoreTableOverlay()/highScoreDisplay()
  *  (highscoreui.c) — those rendered the table as an OpenGL overlay; this is a plain Compose list
@@ -37,6 +39,7 @@ fun HighScoreScreen(entries: List<HighScoreEntry>, onBack: () -> Unit, modifier:
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(wellBackgroundColor)
             .statusBarsPadding()
             .navigationBarsPadding(),
     ) {
@@ -67,6 +70,8 @@ fun HighScoreScreen(entries: List<HighScoreEntry>, onBack: () -> Unit, modifier:
         }
         OutlinedButton(
             onClick = onBack,
+            colors = ghostButtonColors(),
+            border = GhostBorder,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
                 .padding(24.dp)

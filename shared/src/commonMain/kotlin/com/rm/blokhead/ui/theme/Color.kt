@@ -11,11 +11,20 @@ val BrandAmber40 = Color(0xFFB8720E)
 val BrandMagenta80 = Color(0xFFFFB4E0)
 val BrandMagenta40 = Color(0xFFA8296E)
 
+// Well / pad chrome, matching the icon teals and golds and WELL_LINE_COLOR (0.85, 0.85, 0.1).
+val WellLineYellow = Color(0xFFD6D21A)
+val DropGold = Color(0xFFFFC93C)
+val OnDropGold = Color(0xFF3A2A08)
+val AxisTeal = Color(0xFF7EEAE3)
+val AxisStroke = Color(0xFF22C7BE)
+val FilledTeal = Color(0xFF0E7C7B)
+val OnFilledTeal = Color(0xFFF3FFFD)
+
 val BackgroundLight = Color(0xFFF7FAFA)
 val SurfaceLight = Color(0xFFEFF4F4)
 val OnSurfaceLight = Color(0xFF161C1D)
 
-val BackgroundDark = Color(0xFF0B0F10)
+val BackgroundDark = Color(0xFF080A0B)
 val SurfaceDark = Color(0xFF151B1D)
 val OnSurfaceDark = Color(0xFFE3EDEE)
 

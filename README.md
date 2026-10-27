@@ -9,7 +9,7 @@ It hasn't been tested on many device shapes. If the layout doesn't work on yours
 Enjoy!
 Dan
 
-<img src="docs/screenshot-menu.png" alt="BlokHead's main menu: title, Start Game, High Scores, Settings and About" width="180" /> <img src="docs/screenshot-gameplay.png" alt="BlokHead mid-game: a partially built stack of coloured cubes in the 3D well, with the move d-pad and rotate cluster below" width="180" /> <img src="docs/screenshot-settings.png" alt="BlokHead's settings screen: diagonal d-pad corners, left-handed mode, sound, starting difficulty, well size, button position and opacity, and block set" width="180" /> <img src="docs/screenshot-pause.png" alt="BlokHead's pause screen with its Menu button pressed, showing a Quit to Menu confirmation dialog" width="180" />
+<img src="docs/screenshot-menu.png" alt="BlokHead's main menu: isometric well, Start Game, High Scores, Settings and About" width="180" /> <img src="docs/screenshot-gameplay.png" alt="BlokHead mid-game: a partially built stack of coloured cubes in the 3D well, with the move d-pad and rotate cluster below" width="180" /> <img src="docs/screenshot-settings.png" alt="BlokHead's settings screen: play group with starting difficulty, well size preview, well height and block set" width="180" /> <img src="docs/screenshot-pause.png" alt="BlokHead's pause screen with its Menu button pressed, showing a Quit to Menu confirmation dialog" width="180" />
 
 ## Features
 

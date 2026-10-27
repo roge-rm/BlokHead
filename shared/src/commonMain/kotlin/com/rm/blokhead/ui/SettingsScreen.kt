@@ -1,10 +1,13 @@
 package com.rm.blokhead.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -12,19 +15,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.rm.blokhead.data.Settings
 import com.rm.blokhead.game.BlockSet
+import com.rm.blokhead.render.wellBackgroundColor
 import kotlin.math.roundToInt
 
 /** Settings screen — new, standing in for nothing in the original beyond a couple of hardcoded
@@ -37,9 +43,11 @@ fun SettingsScreen(
     onShowGamepadBindings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val floorCubes = remember(settings.wellSize) { settingsFloorCubes(settings.wellSize) }
     Column(
         modifier = modifier
             .fillMaxSize()
+            .background(wellBackgroundColor)
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState())
@@ -52,13 +60,7 @@ fun SettingsScreen(
             modifier = Modifier.padding(bottom = 8.dp),
         )
 
-        GroupHeader("Gameplay & Sound", topPadding = 8.dp)
-        SwitchRow(
-            title = "Sound",
-            subtitle = "Move/rotate/lock/clear/game-over effects",
-            checked = settings.soundEnabled,
-            onCheckedChange = { onSettingsChange(settings.copy(soundEnabled = it)) },
-        )
+        GroupHeader("Play", topPadding = 8.dp)
         IntSliderRow(
             title = "Starting Difficulty",
             value = settings.startingDifficulty,
@@ -71,6 +73,15 @@ fun SettingsScreen(
             range = 4..7,
             valueLabel = { "${it}×$it" },
             onValueChange = { onSettingsChange(settings.copy(wellSize = it)) },
+        )
+        WellPreview(
+            wellSize = settings.wellSize,
+            wellHeight = settings.wellHeight,
+            cubes = floorCubes,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .padding(vertical = 8.dp),
         )
         IntSliderRow(
             title = "Well Height",
@@ -85,18 +96,19 @@ fun SettingsScreen(
             BlockSetChip("All", BlockSet.ALL, settings, onSettingsChange)
         }
 
-        HorizontalDivider(modifier = Modifier.padding(top = 24.dp), color = MaterialTheme.colorScheme.outlineVariant)
-        GroupHeader("Controls")
+        GroupHeader("Controls", topPadding = 24.dp)
         SwitchRow(
-            title = "Touch Gestures",
-            subtitle = "Adds direct gestures on the grid alongside the on-screen buttons: drag to " +
-                "move, two-finger drag/twist to rotate, tap to pause, long-press to hard drop",
+            title = "Touch gestures",
             checked = settings.gestureControlsEnabled,
             onCheckedChange = { onSettingsChange(settings.copy(gestureControlsEnabled = it)) },
         )
         SwitchRow(
-            title = "On-Screen Buttons",
-            subtitle = "Turn off once Touch Gestures covers everything you need, to free up screen space",
+            title = "On-screen buttons",
+            subtitle = if (!settings.gestureControlsEnabled) {
+                "Nothing to tap on the grid if this is off."
+            } else {
+                null
+            },
             checked = settings.onScreenButtonsEnabled,
             onCheckedChange = { onSettingsChange(settings.copy(onScreenButtonsEnabled = it)) },
         )
@@ -105,14 +117,12 @@ fun SettingsScreen(
         // this screen from showing a pile of dead controls.
         if (settings.onScreenButtonsEnabled) {
             SwitchRow(
-                title = "Diagonal D-Pad Corners",
-                subtitle = "Adds diagonal move buttons to the move d-pad's empty corners",
+                title = "Diagonal moves",
                 checked = settings.diagonalButtonsEnabled,
                 onCheckedChange = { onSettingsChange(settings.copy(diagonalButtonsEnabled = it)) },
             )
             SwitchRow(
-                title = "Left-Handed Mode",
-                subtitle = "Swaps the move and rotate control clusters to opposite sides",
+                title = "Left handed",
                 checked = settings.leftHandedMode,
                 onCheckedChange = { onSettingsChange(settings.copy(leftHandedMode = it)) },
             )
@@ -162,9 +172,40 @@ fun SettingsScreen(
                 range = 0.2f..1f,
                 onValueChange = { onSettingsChange(settings.copy(buttonOpacity = it)) },
             )
+            // Fixed 0.5 so a large Button Scale setting can't overflow this row.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 4.dp),
+            ) {
+                GameControls(
+                    onMove = { _, _ -> },
+                    onDiagonalMove = { _, _ -> },
+                    onRotate = { _, _ -> },
+                    onHardDrop = {},
+                    diagonalEnabled = settings.diagonalButtonsEnabled,
+                    leftHanded = settings.leftHandedMode,
+                    opacity = settings.buttonOpacity,
+                    scale = 0.5f,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent()
+                                }
+                            }
+                        },
+                )
+            }
         }
         OutlinedButton(
             onClick = onShowGamepadBindings,
+            colors = ghostButtonColors(),
+            border = GhostBorder,
             modifier = Modifier
                 .padding(top = 20.dp)
                 .gamepadFocusable(onActivate = onShowGamepadBindings),
@@ -172,8 +213,17 @@ fun SettingsScreen(
             Text("Map Controls")
         }
 
+        GroupHeader("Sound", topPadding = 24.dp)
+        SwitchRow(
+            title = "Sound",
+            checked = settings.soundEnabled,
+            onCheckedChange = { onSettingsChange(settings.copy(soundEnabled = it)) },
+        )
+
         OutlinedButton(
             onClick = onBack,
+            colors = ghostButtonColors(),
+            border = GhostBorder,
             modifier = Modifier
                 .padding(top = 24.dp)
                 .gamepadFocusable(onActivate = onBack),
@@ -181,6 +231,18 @@ fun SettingsScreen(
             Text("Back")
         }
     }
+}
+
+private val FloorTop = Color(0xFF0E7C7B)
+private val FloorLeft = Color(0xFF0A5654)
+private val FloorRight = Color(0xFF22C7BE)
+
+private fun settingsFloorCubes(wellSize: Int): List<PreviewCube> {
+    val y = (wellSize - 1).coerceAtLeast(0)
+    return listOf(
+        PreviewCube(0, y, 0, FloorTop, FloorLeft, FloorRight),
+        PreviewCube(1, y, 0, FloorTop, FloorLeft, FloorRight),
+    )
 }
 
 @Composable
@@ -204,7 +266,12 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    subtitle: String? = null,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,7 +281,9 @@ private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onCheck
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
-            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (subtitle != null) {
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
